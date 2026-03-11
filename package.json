@@ -1,0 +1,20 @@
+{
+  "name": "qp-dsl",
+  "version": "1.0.0",
+  "description": "A DSL for Yu-Gi-Oh (Or originally QuantumProtocol) event driven Effect implementation",
+  "keywords": [
+    "DSL",
+    "Yu-Gi-Oh",
+    "QuantumProtocol"
+  ],
+  "license": "ISC",
+  "author": "Blu",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "chevrotain": "^11.2.0"
+  }
+}
