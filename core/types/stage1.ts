@@ -1,7 +1,7 @@
 import { ASTNode, VariableType } from "./generic";
 import * as ERR from "../error"
 import { Context } from "../Utils/Context";
-import { ireg } from "../Utils/TokenStorage";
+import { ireg } from "../Utils";
 import { Pipeline } from "../Utils/pipeline";
 
 export class Target implements ASTNode {

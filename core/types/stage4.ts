@@ -50,6 +50,14 @@ export class AmountSpec {
     ){}
 }
 
+export class OrderSpec extends AmountSpec {
+    constructor(
+        public order : number,
+    ){
+        super(new INT_LIT({raw : "1"} as any, 1))
+    }
+}
+
 // ===== Direction =====
 
 export class DirectionSpec {
@@ -72,6 +80,12 @@ export class ExtensionFlag extends Flag {
     }
 }
 
+export class AnyExtensionFlag extends ExtensionFlag {
+    constructor(){
+        super("*")
+    }
+}
+
 export class RarityFlag extends Flag {
     constructor(public rarityValue: string){
         super()
@@ -87,9 +101,31 @@ export class ArchetypeFlag extends Flag {
 export class PropertyValueFLag extends Flag {
     constructor(
         public statName: string,
-        public statValue: AmountSpec
+        //if requiredValue is not specified, just check for existence of the stat
+        public requiredValue?: AmountSpec,
+        //if overrideTarget is not specified, use the target this class belongs to
+        // otherwise, use this
+        public overrideTarget? : AnyInferedTarget | Backreference
     ){
         super()
+    }
+}
+
+export class RowFlag extends PropertyValueFLag {
+    constructor(
+        requiredValue?: AmountSpec,
+        overrideTarget? : AnyInferedTarget | Backreference
+    ){
+        super("row", requiredValue, overrideTarget)
+    }
+}
+
+export class ColFlag extends PropertyValueFLag {
+    constructor(
+        requiredValue?: AmountSpec,
+        overrideTarget? : AnyInferedTarget | Backreference
+    ){
+        super("column", requiredValue, overrideTarget)
     }
 }
 
@@ -176,7 +212,14 @@ export class Backreference extends InferedTarget {
             }
             else if(f instanceof PropertyValueFLag){
                 if(!hasFlagInstance(PropertyValueFLag, f2 => {
-                    return f2.statName === f.statName && f2.statValue.amount === f.statValue.amount && f2.statValue.operator === f.statValue.operator
+                    return f2.statName === f.statName && (
+                        !f.requiredValue || 
+                        f2.requiredValue?.amount === f.requiredValue.amount &&
+                        f2.requiredValue.operator === f.requiredValue.operator
+                    ) && (
+                        !f.overrideTarget ||
+                        !!this.isTargetOfShape(f.overrideTarget, f2.overrideTarget!)
+                    )
                 })) return false
             }
             else if(f instanceof PlayerFlag){
@@ -338,6 +381,14 @@ export class CardTarget extends InferedTarget {
     }
 }
 
+export class ThisCard extends CardTarget {
+    constructor(
+        oldTarget : ExpectedTarget,
+    ){
+        super(oldTarget)
+    }
+}
+
 // ===== Effect Target =====
 
 export class EffectTarget extends InferedTarget {
@@ -348,6 +399,14 @@ export class EffectTarget extends InferedTarget {
         public fromClause?: CardTarget | Backreference,
     ){
         super(oldTarget, TargetType.Effect)
+    }
+}
+
+export class ThisEffect extends EffectTarget {
+    constructor(
+        oldTarget : ExpectedTarget,
+    ){
+        super(oldTarget)
     }
 }
 
@@ -373,18 +432,38 @@ export class PosTarget extends InferedTarget {
     }
 }
 
+export class PosOfCard extends PosTarget {
+    constructor(
+        oldTarget : ExpectedTarget,
+        card : CardTarget | Backreference
+    ){
+        super(
+            oldTarget, 
+            new AmountSpec(new INT_LIT({raw : "1"} as any, 1)),
+            [],
+            undefined,
+            undefined,
+            undefined,
+            [card]
+        )
+    }
+}
+
+// Pos dont have this
+
 // ===== Zone Target =====
 
 export class ZoneTarget extends InferedTarget {
     constructor(
         oldTarget : ExpectedTarget,
-        public amount?: AmountSpec,
         public flags: ZoneFlag[] = [],
         public zoneName: string = ""
     ){
         super(oldTarget, TargetType.Zone)
     }
 }
+
+// Zone also dont have this
 
 // ===== Player Target =====
 
@@ -398,14 +477,41 @@ export class PlayerTarget extends InferedTarget {
     }
 }
 
+export class ThisPlayer extends PlayerTarget {
+    constructor(
+        oldTarget : ExpectedTarget,
+    ){
+        super(oldTarget, "player")
+    }
+}
+
 // ===== Number Target =====
 
 export class NumberTarget extends InferedTarget {
     constructor(
         oldTarget : ExpectedTarget,
-        public amount : INT_LIT | VarReference,
+        public amount : INT_LIT | VarReference | CountOfTarget | NumberPropertyOfTarget
     ){
         super(oldTarget, TargetType.Number)
+    }
+}
+
+export class CountOfTarget extends NumberTarget {
+    constructor(
+        oldTarget : ExpectedTarget,
+        public countOf : ExpectedTarget
+    ){
+        super(oldTarget, new INT_LIT(oldTarget, 0))
+    }
+}
+
+export class NumberPropertyOfTarget extends NumberTarget {
+    constructor(
+        oldTarget : ExpectedTarget,
+        public propertyName : string,
+        public propertyOf : AnyInferedTarget | Backreference,
+    ){
+        super(oldTarget, new INT_LIT(oldTarget, 0))
     }
 }
 

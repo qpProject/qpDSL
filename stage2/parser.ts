@@ -77,7 +77,9 @@ class Parser extends AstGenParser {
             return new AST.RuntimeVariableDeclareSentence(
                 info.raw, 
                 name.image, 
-                new AST.RuntimeVariable(valueRaw, name.image, new AST.Target(valueRaw))
+                new AST.RuntimeVariable(valueRaw, name.image, new AST.ExpectedTarget(
+                    valueRaw, AST.TargetType.Number
+                ))
             )
         })
     })

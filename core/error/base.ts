@@ -1,5 +1,4 @@
 import { ASTNode } from "../types/generic";
-import util from 'node:util';
 
 export abstract class ASTError extends Error {
     causeStack : (ASTNode | string)[] = []
@@ -33,6 +32,30 @@ export abstract class ASTError extends Error {
         this.causeStack.unshift(...node) //more recent location is up top
     }
 
+    private formatValue(value: any, depth: number = 10, maxArrayLength: number = 5): string {
+        if (depth <= 0) return '...';
+        
+        if (value === null) return 'null';
+        if (value === undefined) return 'undefined';
+        if (typeof value === 'string') return `'${value}'`;
+        if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+        
+        if (Array.isArray(value)) {
+            const items = value.slice(0, maxArrayLength).map(v => this.formatValue(v, depth - 1, maxArrayLength));
+            if (value.length > maxArrayLength) items.push(`... +${value.length - maxArrayLength} more`);
+            return `[ ${items.join(', ')} ]`;
+        }
+        
+        if (typeof value === 'object') {
+            const keys = Object.keys(value).slice(0, maxArrayLength);
+            const items = keys.map(k => `${k}: ${this.formatValue(value[k], depth - 1, maxArrayLength)}`);
+            if (Object.keys(value).length > maxArrayLength) items.push(`... +${Object.keys(value).length - maxArrayLength} more`);
+            return `{ ${items.join(', ')} }`;
+        }
+        
+        return String(value);
+    }
+
     override toString() : string {
         let result = this.name + "\n" + this.message
         let i = 2;
@@ -44,7 +67,7 @@ export abstract class ASTError extends Error {
                 result += `At : (str)"${node}"\n`
             }
             else {
-                const str = util.formatWithOptions({depth : 10, maxArrayLength : 5}, node)
+                const str = this.formatValue(node)
                 result += `At : (node)"${str}"\n`
             }
         }

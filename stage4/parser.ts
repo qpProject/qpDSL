@@ -1,9 +1,10 @@
-import { CstNode, CstParser, ParserMethod, TokenType } from "chevrotain";
+import { CstNode, CstParser, IOrAlt, ParserMethod, TokenType } from "chevrotain";
 import {TOKENS, ALL_TOKENS} from "./lexer";
 import { AstGenParser } from "../core/Utils/AstGenParser";
 import * as AST from "../core/types";
 import * as ERR from "../core/error";
 import { Context } from "../core/Utils/Context";
+import { getTokenStream } from "../core";
 
 function tryBindBackReference(unbindBackref : AST.Backreference): AST.BackreferenceBounded {
     const target = Context.cachedTargets.reverse()
@@ -57,17 +58,17 @@ class Parser extends AstGenParser {
     })
 
     amount_spec_no_op = this.RULE("amount_spec_no_op", () => {
-        let result: string | number | undefined
+        let result: AST.INT_LIT | AST.VarReference | "all" | undefined
         this.OR([
             {ALT: () => {
                 const tok = this.CONSUME(TOKENS.IDBIG)
-                this.ACTION(() => { result = tok.image })
+                this.ACTION(() => { result = new AST.VarReference(this.boundedTarget!, tok.image) })
             }},
             {ALT: () => {
                 this.CONSUME(TOKENS.SYMBOL_LCB)
                 const tok = this.CONSUME(TOKENS.ID)
                 this.CONSUME(TOKENS.SYMBOL_RCB)
-                this.ACTION(() => { result = tok.image })
+                this.ACTION(() => { result = new AST.VarReference(this.boundedTarget!, tok.image) })
             }},
             {ALT: () => {
                 this.CONSUME(TOKENS.keyword_all)
@@ -75,40 +76,48 @@ class Parser extends AstGenParser {
             }},
             {ALT: () => {
                 const tok = this.CONSUME(TOKENS.INT_LITERAL)
-                this.ACTION(() => { result = parseInt(tok.image) })
+                this.ACTION(() => { result = new AST.INT_LIT(this.boundedTarget!, parseInt(tok.image)) })
             }}
         ])
-        return this.ACTION(() => result)
+        return this.ACTION(() => result!)
     })
 
     amount_spec = this.RULE("amount_spec", () => {
         let modifier: AST.AmountModifier = AST.AmountModifier.EQ
-        let amount: AST.INT_LIT | AST.VarReference | "all" | undefined
 
         this.OPTION(() => {
             const op = this.SUBRULE(this.operator)
             this.ACTION(() => { modifier = op })
         })
 
-        const amountNoOpResult = this.SUBRULE(this.amount_spec_no_op)
+        const amount = this.SUBRULE(this.amount_spec_no_op)
 
-        return this.ACTION(() => {
-            const amountValue = amountNoOpResult
-            let processedAmount: AST.INT_LIT | AST.VarReference | "all"
+        return this.ACTION(() => new AST.AmountSpec(amount, modifier))
+    })
 
-            if (typeof amountValue === 'string' && amountValue !== 'all') {
-                // Runtime variable with IDBIG
-                processedAmount = new AST.VarReference(this.boundedTarget!, amountValue)
-            } else if (typeof amountValue === 'string' && amountValue === 'all') {
-                processedAmount = "all"
-            } else if (typeof amountValue === 'number') {
-                processedAmount = new AST.INT_LIT(this.boundedTarget!, amountValue)
-            } else {
-                throw Context.error( new Error("Unknown amount in amount_spec") )
-            }
-
-            return new AST.AmountSpec(processedAmount, modifier)
-        })
+    //first, second, third, <INT><ORDER_MARKER>
+    ordering_spec = this.RULE("ordering_spec", () => {
+        let order : number = NaN
+        this.OR([
+            {ALT: () => {
+                const ord = this.CONSUME(TOKENS.FIRST_LITERAL)
+                this.ACTION(() => { order = 1 })
+            }},
+            {ALT: () => {
+                const ord = this.CONSUME(TOKENS.SECOND_LITERAL)
+                this.ACTION(() => { order = 2 })
+            }},
+            {ALT: () => {
+                const ord = this.CONSUME(TOKENS.THIRD_LITERAL)
+                this.ACTION(() => { order = 3 })
+            }},
+            {ALT: () => {
+                const num = this.CONSUME(TOKENS.INT_LITERAL)
+                this.CONSUME(TOKENS.ORDER_MARKER_LITERAL)
+                this.ACTION(() => { order = parseInt(num.image) })
+            }}
+        ])
+        return this.ACTION(() => new AST.OrderSpec(order!))
     })
 
     direction_spec = this.RULE("direction_spec", () => {
@@ -134,7 +143,67 @@ class Parser extends AstGenParser {
         return this.ACTION(() => new AST.DirectionSpec(directions))
     })
 
+    row_or_col_spec = this.RULE("row_or_col_spec", () => {
+        let flag : AST.RowFlag | AST.ColFlag | undefined
+        let isRow = false
+        this.OR([
+            //literal
+            {ALT: () => {
+                this.OR1([
+                    {ALT: () => {
+                        this.CONSUME(TOKENS.keyword_row)
+                        this.ACTION(() => { isRow = true })
+                    }},
+                    {ALT: () => {
+                        this.CONSUME(TOKENS.keyword_col)
+                        this.ACTION(() => { isRow = false })
+                    }},
+                ])
+
+                const ammt = this.SUBRULE(this.amount_spec_no_op)
+                if(ammt === "all"){
+                    throw Context.error( new Error("Cannot specify 'all' in row_spec") )
+                }
+                this.ACTION(() => { flag = isRow ? new AST.RowFlag(new AST.AmountSpec(ammt)) : new AST.ColFlag(new AST.AmountSpec(ammt)) })
+            }},
+            //property of card (style 1 : row of card)
+            {ALT: () => {
+                this.OR2([
+                    {ALT: () => {
+                        this.CONSUME1(TOKENS.keyword_row)
+                        this.ACTION(() => { isRow = true })
+                    }},
+                    {ALT: () => {
+                        this.CONSUME1(TOKENS.keyword_col)
+                        this.ACTION(() => { isRow = false })
+                    }},
+                ])
+                this.CONSUME(TOKENS.prep_from)
+                const card = this.SUBRULE(this.expect_card)
+                this.ACTION(() => { flag = isRow ? new AST.RowFlag(undefined, card) : new AST.ColFlag(undefined, card) })
+            }},
+            //property of card (style 2 : card's row)
+            {ALT: () => {
+                const card = this.SUBRULE1(this.expect_card)
+                this.CONSUME(TOKENS.OWNERSHIP_MARKER_LITERAL)
+                this.OR3([
+                    {ALT: () => {
+                        this.CONSUME2(TOKENS.keyword_row)
+                        this.ACTION(() => { isRow = true })
+                    }},
+                    {ALT: () => {
+                        this.CONSUME2(TOKENS.keyword_col)
+                        this.ACTION(() => { isRow = false })
+                    }},
+                ])
+                this.ACTION(() => { flag = isRow ? new AST.RowFlag(undefined, card) : new AST.ColFlag(undefined, card) })
+            }},
+        ])
+        return this.ACTION(() => flag!)
+    })
+
     card_flag = this.RULE("card_flag", () => {
+        // console.log("Inside card_flag, next tokens are: ", getTokenStream(this as any))
         let flag: AST.CardFlag | undefined
         this.OR([
             {ALT: () => {
@@ -146,6 +215,10 @@ class Parser extends AstGenParser {
                 this.ACTION(() => { flag = new AST.ExtensionFlag(ext.image) })
             }},
             {ALT: () => {
+                this.CONSUME(TOKENS.ANY_EXTENSION_LITERAL)
+                this.ACTION(() => { flag = new AST.AnyExtensionFlag() })
+            }},
+            {ALT: () => {
                 const rarity = this.CONSUME(TOKENS.keyword_card_rarity)
                 this.ACTION(() => { flag = new AST.RarityFlag(rarity.image) })
             }},
@@ -155,18 +228,8 @@ class Parser extends AstGenParser {
             }},
             {ALT: () => {
                 const stat = this.CONSUME(TOKENS.keyword_card_stat)
-                const amountCtx = this.SUBRULE(this.amount_spec_no_op)
+                const statValue = this.SUBRULE(this.amount_spec_no_op)
                 this.ACTION(() => {
-                    let statValue: AST.INT_LIT | AST.VarReference | "all"
-                    if (typeof amountCtx === 'string' && amountCtx !== 'all') {
-                        statValue = new AST.VarReference(this.boundedTarget!, amountCtx)
-                    } else if (amountCtx === 'all') {
-                        statValue = 'all'
-                    } else if (typeof amountCtx === 'number') {
-                        statValue = new AST.INT_LIT(this.boundedTarget!, amountCtx)
-                    } else {
-                        throw Context.error( new Error("Unknown stat value") )
-                    }
                     flag = new AST.PropertyValueFLag(stat.image, new AST.AmountSpec(statValue))
                 })
             }},
@@ -207,40 +270,13 @@ class Parser extends AstGenParser {
                 this.CONSUME(TOKENS.keyword_random)
                 this.ACTION(() => { flag = new AST.RandomFlag() })
             }},
-            {ALT: () => {
-                this.CONSUME(TOKENS.keyword_row)
-                const rowSpecCtx = this.SUBRULE1(this.amount_spec_no_op)
-                this.ACTION(() => {
-                    let rowValue: AST.INT_LIT | AST.VarReference | "all"
-                    if (typeof rowSpecCtx === 'string' && rowSpecCtx !== 'all') {
-                        rowValue = new AST.VarReference(this.boundedTarget!, rowSpecCtx)
-                    } else if (rowSpecCtx === 'all') {
-                        rowValue = 'all'
-                    } else if (typeof rowSpecCtx === 'number') {
-                        rowValue = new AST.INT_LIT(this.boundedTarget!, rowSpecCtx)
-                    } else {
-                        throw Context.error( new Error("Unknown row value") )
-                    }
-                    flag = new AST.PropertyValueFLag("row", new AST.AmountSpec(rowValue))
-                })
-            }},
-            {ALT: () => {
-                this.CONSUME(TOKENS.keyword_col)
-                const colSpecCtx = this.SUBRULE2(this.amount_spec_no_op)
-                this.ACTION(() => {
-                    let colValue: AST.INT_LIT | AST.VarReference | "all"
-                    if (typeof colSpecCtx === 'string' && colSpecCtx !== 'all') {
-                        colValue = new AST.VarReference(this.boundedTarget!, colSpecCtx)
-                    } else if (colSpecCtx === 'all') {
-                        colValue = 'all'
-                    } else if (typeof colSpecCtx === 'number') {
-                        colValue = new AST.INT_LIT(this.boundedTarget!, colSpecCtx)
-                    } else {
-                        throw Context.error( new Error("Unknown col value") )
-                    }
-                    flag = new AST.PropertyValueFLag("col", new AST.AmountSpec(colValue))
-                })
-            }},
+            {
+                ALT: () => {
+                    const flg = this.SUBRULE(this.row_or_col_spec)
+                    this.ACTION(() => { flag = flg })
+                },
+                GATE : () => this.lookaheadUntilToken(TOKENS.keyword_row, TOKENS.keyword_col)
+            },
         ])
         return this.ACTION(() => flag!)
     })
@@ -253,6 +289,7 @@ class Parser extends AstGenParser {
                 this.ACTION(() => { flag = new AST.RandomFlag() })
             }},
             {ALT: () => {
+                // console.log("Inside next -> zone flag, next tokens are: ", getTokenStream(this as any))
                 const playerName = this.CONSUME(TOKENS.keyword_player_name)
                 const playerIndex = this.OPTION(() => this.CONSUME(TOKENS.INT_LITERAL))
                 this.ACTION(() => {
@@ -265,20 +302,44 @@ class Parser extends AstGenParser {
 
     //main targets
     card_spec = this.RULE("card_spec", () => {
-        const flags: AST.CardFlag[] = []
+        // console.log("Inside card spec, next tokens are: ", getTokenStream(this as any))
+        let flags: AST.CardFlag[] = []
         let amount: AST.AmountSpec | undefined
         let fromClause: AST.ZoneTarget | AST.PosTarget | AST.Backreference | undefined
         const withClauses: AST.CardWithClause[] = []
 
         this.OPTION1(() => {
-            const amt = this.SUBRULE1(this.amount_spec)
-            this.ACTION(() => { amount = amt })
+            this.OR([
+                //amount
+                {ALT : () => {
+                    const amt = this.SUBRULE(this.amount_spec)
+                    this.ACTION(() => { amount = amt })
+                }},
+                //order
+                {
+                    ALT : () => {
+                        const ord = this.SUBRULE(this.ordering_spec)
+                        this.ACTION(() => { amount = ord })
+                    },
+                    GATE: this.BACKTRACK(this.ordering_spec)
+                }
+            ])
         })
+
+        // console.log("Inside card spec, after amount, next tokens are: ", getTokenStream(this as any))
+
 
         this.MANY1(() => {
             const flg = this.SUBRULE(this.card_flag)
-            this.ACTION(() => flags.push(flg))
+            this.ACTION(() => {
+                if(flg instanceof AST.AnyExtensionFlag){
+                    flags = flags.filter(f => !(f instanceof AST.ExtensionFlag))
+                }
+                flags.push(flg)
+            })
         })
+
+        // console.log("Inside card spec, after flags, next tokens are: ", getTokenStream(this as any))
 
         this.CONSUME(TOKENS.keyword_card)
 
@@ -286,13 +347,16 @@ class Parser extends AstGenParser {
         this.OPTION2(() => {
             this.CONSUME(TOKENS.prep_from)
             const from = this.SUBRULE(this.expect_pos_or_zone)
+            // console.log("Inside card spec, inside from clause, next tokens are: ", getTokenStream(this as any))
             this.ACTION(() => { fromClause = from })
         })
+
+        // console.log("Inside card spec, after pos or zone, next tokens are: ", getTokenStream(this as any))
 
         //with clause (many)
         this.MANY2(() => {
             this.CONSUME(TOKENS.prep_with)
-            this.OR([
+            this.OR1([
                 {
                     ALT: () => {
                         const eff = this.SUBRULE(this.expect_effect)
@@ -309,13 +373,12 @@ class Parser extends AstGenParser {
                             withClauses.push({ stat: { statName: "", statValue: stat } })
                         })
                     },
-                    GATE: this.BACKTRACK(() => {
-                        this.SUBRULE2(this.amount_spec)
-                        this.CONSUME(TOKENS.keyword_card_stat)
-                    }) 
+                    GATE: () => this.lookaheadUntilToken(TOKENS.keyword_card_stat)
                 }
             ])
         })
+
+        // console.log("Inside card spec, after with clauses, next tokens are: ", getTokenStream(this as any))
 
         return this.ACTION(() => new AST.CardTarget(this.boundedTarget!, amount, flags, fromClause, withClauses))
     })
@@ -326,8 +389,21 @@ class Parser extends AstGenParser {
         let fromClause: AST.CardTarget | AST.Backreference | undefined
 
         this.OPTION1(() => {
-            const amt = this.SUBRULE(this.amount_spec)
-            this.ACTION(() => { amount = amt })
+            this.OR([
+                //amount
+                {ALT : () => {
+                    const amt = this.SUBRULE(this.amount_spec)
+                    this.ACTION(() => { amount = amt })
+                }},
+                //order
+                {
+                    ALT : () => {
+                        const ord = this.SUBRULE(this.ordering_spec)
+                        this.ACTION(() => { amount = ord })
+                    },
+                    GATE: this.BACKTRACK(this.ordering_spec)
+                }
+            ])
         })
 
         this.MANY(() => {
@@ -348,6 +424,26 @@ class Parser extends AstGenParser {
     })
 
     pos_spec = this.RULE("pos_spec", () => {
+        let target: AST.PosTarget | undefined
+        this.OR([
+            {ALT: () => target = this.SUBRULE(this.pos_spec_literal), GATE: () => this.lookaheadUntilToken(TOKENS.keyword_pos)},
+            {ALT: () => target = this.SUBRULE(this.pos_spec_row_or_col_only)}
+        ])
+        return this.ACTION(() => target!)
+    })
+
+    pos_spec_row_or_col_only = this.RULE("pos_spec_row_or_col_only", () => {
+        const flag = this.SUBRULE(this.row_or_col_spec)
+        return this.ACTION(() => new AST.PosTarget(
+            this.boundedTarget!, 
+            new AST.AmountSpec(new AST.INT_LIT({raw : "1"} as any, 1)),
+            [flag], 
+            new AST.ZoneTarget(this.boundedTarget!, [new AST.PlayerFlag("player")], "field"),
+        ))
+    })
+
+    pos_spec_literal = this.RULE("pos_spec_literal", () => {
+        // console.log("Inside pos spec, next tokens are: ", getTokenStream(this as any))
         const flags: AST.PosFlag[] = []
         let amount: AST.AmountSpec | undefined
         let fromClause: AST.ZoneTarget | AST.Backreference | undefined
@@ -356,8 +452,21 @@ class Parser extends AstGenParser {
         const withClauses: (AST.CardTarget | AST.Backreference)[] = []
 
         this.OPTION1(() => {
-            const amt = this.SUBRULE1(this.amount_spec)
-            this.ACTION(() => { amount = amt })
+            this.OR([
+                //amount
+                {ALT : () => {
+                    const amt = this.SUBRULE(this.amount_spec)
+                    this.ACTION(() => { amount = amt })
+                }},
+                //order
+                {
+                    ALT : () => {
+                        const ord = this.SUBRULE(this.ordering_spec)
+                        this.ACTION(() => { amount = ord })
+                    },
+                    GATE: this.BACKTRACK(this.ordering_spec)
+                }
+            ])
         })
 
         this.MANY1(() => {
@@ -365,11 +474,25 @@ class Parser extends AstGenParser {
             this.ACTION(() => flags.push(flg))
         })
 
+        this.CONSUME(TOKENS.keyword_pos)
+
         //from clause
         this.OPTION2(() => {
             this.CONSUME1(TOKENS.prep_from)
-            const from = this.SUBRULE(this.expect_zone)
-            this.ACTION(() => { fromClause = from })
+            this.OR1([
+                {
+                    ALT: () => {
+                        const from = this.SUBRULE(this.expect_zone)
+                        this.ACTION(() => { fromClause = from })
+                    },
+                    GATE : () => this.lookaheadUntilToken(TOKENS.keyword_zone_name)
+                },
+                //from row/col spec (literal)
+                {ALT: () => {
+                    const flg = this.SUBRULE(this.row_or_col_spec)
+                    this.ACTION(() => { flags.push(flg) })
+                }},
+            ])
         })
 
         //in direction clause
@@ -411,78 +534,111 @@ class Parser extends AstGenParser {
     })
 
     zone_spec = this.RULE("zone_spec", () => {
+        // console.log("Inside zone spec, next tokens are: ", getTokenStream(this as any))
         const flags: AST.ZoneFlag[] = []
-        let amount: AST.AmountSpec | undefined
-        
-        this.OPTION(() => {
-            const amt = this.SUBRULE(this.amount_spec)
-            this.ACTION(() => { amount = amt })
-        })
 
         this.MANY(() => {
             const flg = this.SUBRULE(this.zone_flag)
             this.ACTION(() => flags.push(flg))
         })
 
+        // console.log("Inside zone spec, after flags, next tokens are: ", getTokenStream(this as any))
+
         const zoneName = this.CONSUME(TOKENS.keyword_zone_name)
 
-        return this.ACTION(() => new AST.ZoneTarget(this.boundedTarget!, amount, flags, zoneName.image))
+        return this.ACTION(() => {
+            // console.log("Creating zone target with name ", zoneName.image, " and flags ", flags)
+            return new AST.ZoneTarget(this.boundedTarget!, flags, zoneName.image)
+        })
     })
 
     // entry points (top level rules)
 
+    //this is just utils method
+    // if one need to modify pos and/or zone target
+    // modify expect_pos and expect_zone instead of this
     expect_pos_or_zone = this.RULE("expect_pos_or_zone", () => {
         let result: AST.ZoneTarget | AST.PosTarget | AST.BackreferenceBounded | undefined
-        this.OR1([
+        // console.log("Inside expect_pos_or_zone, next tokens are: ", getTokenStream(this as any))
+        
+        this.OR([
             //backref with optional shape spec (pos or zone)
-            {ALT: () => {
-                this.beginRecordTokens()
-                this.CONSUME2(TOKENS.keyword_back_refrence)
-                let ref: AST.Backreference | undefined
-                this.OPTION(() => {
-                    this.OR2([
-                        {
-                            ALT: () => {
-                                const spec = this.SUBRULE1(this.pos_spec)
-                                const info = this.endRecordTokens()
-                                this.ACTION(() => { ref = new AST.Backreference(info.raw, spec) })
-                            },
-                            GATE : () => this.lookaheadUntilToken(TOKENS.keyword_pos)
-                        },
-                        {ALT: () => {
-                            const spec = this.SUBRULE1(this.zone_spec)
-                            const info = this.endRecordTokens()
-                            this.ACTION(() => { ref = new AST.Backreference(info.raw, spec) })
-                        }}
-                    ])
-                })
-                this.ACTION(() => {
-                    if (!ref) {
-                        const info = this.endRecordTokens()
-                        ref = new AST.AnyBackreference(info.raw)
-                    }
-                    result = tryBindBackReference(ref)
-                })
-            }},
-            //explicit new target spec
             {
                 ALT: () => {
-                    const spec = this.SUBRULE2(this.pos_spec)
-                    this.ACTION(() => { result = spec })
+                    // console.log("Inside expect_pos_or_zone -> backref, next tokens are: ", getTokenStream(this as any))
+                    this.beginRecordTokens()
+                    this.CONSUME2(TOKENS.keyword_back_refrence)
+                    let ref: AST.Backreference | undefined
+                    this.OPTION(() => {
+                        this.OR1([
+                            {
+                                ALT : () => {
+                                    // console.log("Inside expect_pos_or_zone -> backref -> pos, next tokens are: ", getTokenStream(this as any))
+                                    const pos = this.SUBRULE(this.expect_pos)
+                                    this.ACTION(() => { ref = new AST.Backreference(this.endRecordTokens().raw, pos) })
+                                },
+                                GATE : () => this.lookaheadUntilToken(TOKENS.keyword_pos)
+                            },
+                            {
+                                ALT : () => {
+                                    // console.log("Inside expect_pos_or_zone -> backref -> zone, next tokens are: ", getTokenStream(this as any))
+                                    const zone = this.SUBRULE(this.expect_zone)
+                                    this.ACTION(() => { ref = new AST.Backreference(this.endRecordTokens().raw, zone) })
+                                },
+                                GATE : () => this.lookaheadUntilToken(TOKENS.keyword_zone_name)
+                            }
+                        ])
+                    })
+                    this.ACTION(() => {
+                        if (!ref) {
+                            const info = this.endRecordTokens()
+                            ref = new AST.AnyBackreference(info.raw)
+                        }
+                        result = tryBindBackReference(ref)
+                    })
+                },
+                GATE : () => this.LA(1).tokenType.tokenTypeIdx === TOKENS.keyword_back_refrence.tokenTypeIdx
+            },
+            //explicit new target spec
+            
+            {
+                ALT : () => {
+                    // console.log("Inside expect_pos_or_zone -> pos, next tokens are: ", getTokenStream(this as any))
+                    const pos = this.SUBRULE1(this.expect_pos)
+                    this.ACTION(() => { result = pos })
                 },
                 GATE : () => this.lookaheadUntilToken(TOKENS.keyword_pos)
             },
-            {ALT: () => {
-                const spec = this.SUBRULE2(this.zone_spec)
-                this.ACTION(() => { result = spec })
-            }}
+            {
+                ALT : () => {
+                    // console.log("Inside expect_pos_or_zone -> zone, next tokens are: ", getTokenStream(this as any))
+                    const zone = this.SUBRULE1(this.expect_zone)
+                    this.ACTION(() => { result = zone })
+                },
+                GATE : () => this.lookaheadUntilToken(TOKENS.keyword_zone_name)
+            }
+            
         ])
-        return this.ACTION(() => result!)
+        return this.ACTION(() => {
+            if(result === undefined){
+                // console.log("No paths picked somehow?")
+            }
+            return result!
+        })
     })
 
     expect_card = this.RULE("expect_card", () => {
+        // console.log("Inside expect_card, next tokens are: ", getTokenStream(this as any))
         let result: AST.CardTarget | AST.BackreferenceBounded | undefined
         this.OR([
+            //this card
+            {ALT: () => {
+                this.CONSUME(TOKENS.keyword_this)
+                this.CONSUME(TOKENS.keyword_card)
+                this.ACTION(() => {
+                    result = new AST.ThisCard(this.boundedTarget!)
+                })
+            }},
             //backref with optional shape spec (card)
             {ALT: () => {
                 this.beginRecordTokens()
@@ -513,6 +669,41 @@ class Parser extends AstGenParser {
     expect_effect = this.RULE("expect_effect", () => {
         let result: AST.EffectTarget | AST.BackreferenceBounded | undefined
         this.OR([
+            //effect of card (style 2, style 1 is just effect_spec with from clause)
+            {
+                ALT: () => {
+                    const from_clause = this.SUBRULE(this.expect_card)
+                    this.CONSUME(TOKENS.OWNERSHIP_MARKER_LITERAL)
+                    
+                    const flags: AST.EffectFlag[] = []
+                    let amount: AST.AmountSpec | undefined
+
+                    this.OPTION1(() => {
+                        const amt = this.SUBRULE(this.amount_spec)
+                        this.ACTION(() => { amount = amt })
+                    })
+
+                    this.MANY(() => {
+                        const flg = this.SUBRULE(this.effect_flag)
+                        this.ACTION(() => flags.push(flg))
+                    })
+
+                    this.CONSUME(TOKENS.keyword_effect)
+
+                    this.ACTION(() => {
+                        result = new AST.EffectTarget(this.boundedTarget!, amount, flags, from_clause)
+                    })
+                },
+                GATE : () => this.lookaheadUntilToken(TOKENS.OWNERSHIP_MARKER_LITERAL)
+            },
+            //this effect
+            {ALT: () => {
+                this.CONSUME(TOKENS.keyword_this)
+                this.CONSUME1(TOKENS.keyword_effect)
+                this.ACTION(() => {
+                    result = new AST.ThisEffect(this.boundedTarget!)
+                })
+            }},
             //backref with optional shape spec (effect)
             {ALT: () => {
                 this.beginRecordTokens()
@@ -543,6 +734,18 @@ class Parser extends AstGenParser {
     expect_pos = this.RULE("expect_pos", () => {
         let result: AST.PosTarget | AST.BackreferenceBounded | undefined
         this.OR([
+            //pos of card (style 2, style 1 is just pos_spec with from clause)
+            {
+                ALT: () => {
+                    const from_clause = this.SUBRULE(this.expect_card)
+                    this.CONSUME(TOKENS.OWNERSHIP_MARKER_LITERAL)
+                    this.CONSUME(TOKENS.keyword_pos)
+                    this.ACTION(() => {
+                        result = new AST.PosOfCard(this.boundedTarget!, from_clause)
+                    })
+                },
+                GATE : () => this.lookaheadUntilToken(TOKENS.OWNERSHIP_MARKER_LITERAL)
+            },
             //backref with optional shape spec (pos)
             {ALT: () => {
                 this.beginRecordTokens()
@@ -560,7 +763,9 @@ class Parser extends AstGenParser {
                     }
                     result = tryBindBackReference(ref)
                 })
-            }},
+            },
+                GATE : () => this.LA(1).tokenType.tokenTypeIdx === TOKENS.keyword_back_refrence.tokenTypeIdx
+            },
             //explicit new target spec
             {ALT: () => {
                 const spec = this.SUBRULE2(this.pos_spec)
@@ -600,13 +805,68 @@ class Parser extends AstGenParser {
         return this.ACTION(() => result!)
     })
 
-    expect_number = this.RULE("expect_number", () => {
+    //int literals, var refs, and named number literals
+    expect_number_simple = this.RULE("expect_number_simple", () => {
         let result: AST.INT_LIT | AST.VarReference | undefined
         this.OR([
+            //int literal
             {ALT: () => {
                 const tok = this.CONSUME(TOKENS.INT_LITERAL)
                 this.ACTION(() => { result = new AST.INT_LIT(this.boundedTarget!, parseInt(tok.image)) })
             }},
+
+            // named number literal
+            //zero literal
+            {ALT: () => {
+                this.CONSUME(TOKENS.ZERO_LITERAL)
+                this.ACTION(() => { result = new AST.INT_LIT(this.boundedTarget!, 0) })
+            }},
+            //one literal
+            {ALT: () => {
+                this.CONSUME(TOKENS.ONE_LITERAL)
+                this.ACTION(() => { result = new AST.INT_LIT(this.boundedTarget!, 1) })
+            }},
+            //two literal
+            {ALT: () => {
+                this.CONSUME(TOKENS.TWO_LITERAL)
+                this.ACTION(() => { result = new AST.INT_LIT(this.boundedTarget!, 2) })
+            }},
+            //three literal
+            {ALT: () => {
+                this.CONSUME(TOKENS.THREE_LITERAL)
+                this.ACTION(() => { result = new AST.INT_LIT(this.boundedTarget!, 3) })
+            }},
+            //four literal
+            {ALT: () => {
+                this.CONSUME(TOKENS.FOUR_LITERAL)
+                this.ACTION(() => { result = new AST.INT_LIT(this.boundedTarget!, 4) })
+            }},
+            //five literal
+            {ALT: () => {
+                this.CONSUME(TOKENS.FIVE_LITERAL)
+                this.ACTION(() => { result = new AST.INT_LIT(this.boundedTarget!, 5) })
+            }},
+            //six literal
+            {ALT: () => {
+                this.CONSUME(TOKENS.SIX_LITERAL)
+                this.ACTION(() => { result = new AST.INT_LIT(this.boundedTarget!, 6) })
+            }},
+            //seven literal
+            {ALT: () => {
+                this.CONSUME(TOKENS.SEVEN_LITERAL)
+                this.ACTION(() => { result = new AST.INT_LIT(this.boundedTarget!, 7) })
+            }},
+            //eight literal
+            {ALT: () => {
+                this.CONSUME(TOKENS.EIGHT_LITERAL)
+                this.ACTION(() => { result = new AST.INT_LIT(this.boundedTarget!, 8) })
+            }},
+            //nine literal
+            {ALT: () => {
+                this.CONSUME(TOKENS.NINE_LITERAL)
+                this.ACTION(() => { result = new AST.INT_LIT(this.boundedTarget!, 9) })
+            }},
+
             //runtime var reference
             {ALT: () => {
                 const tok = this.CONSUME(TOKENS.IDBIG)
@@ -618,23 +878,128 @@ class Parser extends AstGenParser {
                 const tok = this.CONSUME(TOKENS.ID)
                 this.CONSUME(TOKENS.SYMBOL_RCB)
                 this.ACTION(() => { result = new AST.VarReference(this.boundedTarget!, tok.image) })
-            }}
+            }},
+        ])
+        return this.ACTION(() => result!)
+    })
+
+    expect_number_extended = this.RULE("expect_number_extended", () => {
+        let result: AST.INT_LIT | AST.VarReference | AST.CountOfTarget | AST.NumberPropertyOfTarget | undefined
+        // console.log("Expecting number, next tokens are: ", getTokenStream(this as any))
+
+        this.OR([
+            {ALT: () => {
+                const num = this.SUBRULE(this.expect_number_simple)
+                this.ACTION(() => { result = num })
+            }},
+
+            //count targets
+            {ALT: () => {
+                // console.log("Inside count of")
+                this.CONSUME(TOKENS.op_count_of)
+                const countTarget = this.SUBRULE(this.expect_anything)
+                this.ACTION(() => { 
+                    result = new AST.CountOfTarget(this.boundedTarget!, countTarget) 
+                })
+            }},
+
+            //property access card, style 1
+            {ALT: () => {
+                const propertyName = this.CONSUME(TOKENS.keyword_card_stat)
+                this.CONSUME(TOKENS.prep_from)
+                const propTarget = this.SUBRULE1(this.expect_card)
+                this.ACTION(() => { 
+                    result = new AST.NumberPropertyOfTarget(
+                        this.boundedTarget!, 
+                        propertyName.image, 
+                        propTarget
+                    )
+                })
+            }},
+
+            //property access card, style 2
+            {
+                ALT: () => {
+                    const propTarget = this.SUBRULE2(this.expect_card)
+                    this.CONSUME(TOKENS.OWNERSHIP_MARKER_LITERAL)
+                    const propertyName = this.CONSUME2(TOKENS.keyword_card_stat)
+                    this.ACTION(() => {
+                        result = new AST.NumberPropertyOfTarget(
+                            this.boundedTarget!, 
+                            propertyName.image, 
+                            propTarget
+                        )
+                    })
+                },
+                GATE : () => this.lookaheadUntilToken(TOKENS.OWNERSHIP_MARKER_LITERAL)
+            },
+
+            //property access player, style 1 
+            {ALT: () => {
+                const propertyName = this.CONSUME(TOKENS.keyword_heart)
+                this.CONSUME1(TOKENS.prep_from)
+                const propTarget = this.SUBRULE1(this.expect_player)
+                this.ACTION(() => { 
+                    result = new AST.NumberPropertyOfTarget(
+                        this.boundedTarget!, 
+                        propertyName.image, 
+                        propTarget
+                    )
+                })
+            }},
+
+            //property access player, style 2
+            {
+                ALT: () => {
+                    const propTarget = this.SUBRULE2(this.expect_player)
+                    this.CONSUME1(TOKENS.OWNERSHIP_MARKER_LITERAL)
+                    const propertyName = this.CONSUME2(TOKENS.keyword_heart)
+                    this.ACTION(() => {
+                        result = new AST.NumberPropertyOfTarget(
+                            this.boundedTarget!, 
+                            propertyName.image, 
+                            propTarget
+                        )
+                    })
+                },
+                GATE : () => this.lookaheadUntilToken(TOKENS.OWNERSHIP_MARKER_LITERAL) && this.lookaheadUntilToken(TOKENS.keyword_heart)
+            },
         ])
         return this.ACTION(() => new AST.NumberTarget(this.boundedTarget!, result!))
     })
 
     expect_player = this.RULE("expect_player", () => {
-        const playerName = this.CONSUME(TOKENS.keyword_player_name)
-        const playerIndex = this.OPTION(() => this.CONSUME(TOKENS.INT_LITERAL))
-        
-        return this.ACTION(() => new AST.PlayerTarget(this.boundedTarget!, playerName.image, playerIndex ? parseInt(playerIndex.image) : undefined))
+        let result: AST.PlayerTarget | undefined
+        this.OR([
+            {ALT: () => {
+                const playerName = this.CONSUME(TOKENS.keyword_player_name)
+                const playerIndex = this.OPTION(() => this.CONSUME(TOKENS.INT_LITERAL))
+                
+                this.ACTION(() => 
+                    result = new AST.PlayerTarget(
+                        this.boundedTarget!, 
+                        playerName.image, 
+                        playerIndex ? parseInt(playerIndex.image) : undefined
+                    )
+                )
+            }},
+            {ALT: () => {
+                this.CONSUME(TOKENS.keyword_this)
+                this.CONSUME1(TOKENS.keyword_player_name)
+
+                this.ACTION(() => {
+                    result = new AST.ThisPlayer(this.boundedTarget!)
+                })
+            }}
+        ])
+        return this.ACTION(() => result!)
     })
 
-    private lookaheadUntilToken(token : TokenType){
+    private lookaheadUntilToken(...token : TokenType[]){
         let i = 1
         let nextToken = this.LA(i)
         while(nextToken.tokenType.name !== "EOF"){
-            if(nextToken.tokenType === token){
+            if(token.some(t => t.tokenTypeIdx === nextToken.tokenType.tokenTypeIdx)){
                 return true
             }
             i++
@@ -645,85 +1010,93 @@ class Parser extends AstGenParser {
 
     expect_anything = this.RULE("expect_anything", () => {
         let result: AST.CardTarget | AST.EffectTarget | AST.PosTarget | AST.ZoneTarget | AST.BackreferenceBounded | undefined
-        
-        this.OR1([
+        // console.log("Inside ecpect_anything, next tokens are: ", getTokenStream(this as any))
+        this.OR([
             //backref with optional shape spec (card or effect or pos or zone)
-            {ALT: () => {
-                this.beginRecordTokens()
-                this.CONSUME2(TOKENS.keyword_back_refrence)
-                let ref: AST.Backreference | undefined
-                this.OPTION(() => {
-                    this.OR2([
-                        {
-                            ALT: () => {
-                                const spec = this.SUBRULE1(this.card_spec)
-                                const info = this.endRecordTokens()
-                                this.ACTION(() => { ref = new AST.Backreference(info.raw, spec) })
+            {
+                ALT: () => {
+                    this.beginRecordTokens()
+                    // console.log("Inside backreference, next tokens are: ", getTokenStream(this as any))
+                    this.CONSUME2(TOKENS.keyword_back_refrence)
+                    let ref: AST.Backreference | undefined
+                    this.OPTION(() => {
+                        this.OR1([
+                            {
+                                ALT: () => {
+                                    const spec = this.SUBRULE1(this.card_spec)
+                                    const info = this.endRecordTokens()
+                                    this.ACTION(() => { ref = new AST.Backreference(info.raw, spec) })
+                                },
+                                GATE : () => this.lookaheadUntilToken(TOKENS.keyword_card)
                             },
-                            GATE : () => this.lookaheadUntilToken(TOKENS.keyword_card)
-                        },
-                        {
-                            ALT: () => {
-                                const spec = this.SUBRULE1(this.effect_spec)
-                                const info = this.endRecordTokens()
-                                this.ACTION(() => { ref = new AST.Backreference(info.raw, spec) })
+                            {
+                                ALT: () => {
+                                    const spec = this.SUBRULE1(this.effect_spec)
+                                    const info = this.endRecordTokens()
+                                    this.ACTION(() => { ref = new AST.Backreference(info.raw, spec) })
+                                },
+                                GATE : () => this.lookaheadUntilToken(TOKENS.keyword_effect)
                             },
-                            GATE : () => this.lookaheadUntilToken(TOKENS.keyword_effect)
-                        },
-                        {
-                            ALT: () => {
-                                const spec = this.SUBRULE1(this.pos_spec)
-                                const info = this.endRecordTokens()
-                                this.ACTION(() => { ref = new AST.Backreference(info.raw, spec) })
+                            {
+                                ALT: () => {
+                                    const spec = this.SUBRULE1(this.pos_spec)
+                                    const info = this.endRecordTokens()
+                                    this.ACTION(() => { ref = new AST.Backreference(info.raw, spec) })
+                                },
+                                GATE : () => this.lookaheadUntilToken(TOKENS.keyword_pos)
                             },
-                            GATE : () => this.lookaheadUntilToken(TOKENS.keyword_pos)
-                        },
-                        {
-                            ALT: () => {
-                                const spec = this.SUBRULE1(this.zone_spec)
-                                const info = this.endRecordTokens()
-                                this.ACTION(() => { ref = new AST.Backreference(info.raw, spec) })
+                            {
+                                ALT: () => {
+                                    const spec = this.SUBRULE1(this.zone_spec)
+                                    const info = this.endRecordTokens()
+                                    this.ACTION(() => { ref = new AST.Backreference(info.raw, spec) })
+                                },
+                                GATE : () => this.lookaheadUntilToken(TOKENS.keyword_zone_name)
                             },
-                            GATE : () => this.lookaheadUntilToken(TOKENS.keyword_zone_name)
-                        },
-                    ])
-                })
-                this.ACTION(() => {
-                    if (!ref) {
-                        const info = this.endRecordTokens()
-                        ref = new AST.AnyBackreference(info.raw)
-                    }
-                    result = tryBindBackReference(ref)
-                })
-            }},
+                        ])
+                    })
+                    this.ACTION(() => {
+                        if (!ref) {
+                            const info = this.endRecordTokens()
+                            ref = new AST.AnyBackreference(info.raw)
+                        }
+                        result = tryBindBackReference(ref)
+                    })
+                },
+                GATE : () => this.LA(1).tokenType.tokenTypeIdx === TOKENS.keyword_back_refrence.tokenTypeIdx
+            },
             //explicit new target spec
             {
                 ALT: () => {
+                    // console.log("Inside next -> card spec, next tokens are: ", getTokenStream(this as any))
                     const spec = this.SUBRULE2(this.card_spec)
                     this.ACTION(() => { result = spec })
                 },
-                GATE : () => this.lookaheadUntilToken(TOKENS.keyword_card)
+                GATE : () => this.lookaheadUntilToken(TOKENS.keyword_card) && this.LA(1).tokenType.tokenTypeIdx !== TOKENS.keyword_back_refrence.tokenTypeIdx
             },
             {
                 ALT: () => {
+                    // console.log("Inside next -> effect spec, next tokens are: ", getTokenStream(this as any))
                     const spec = this.SUBRULE2(this.effect_spec)
                     this.ACTION(() => { result = spec })
                 },
-                GATE : () => this.lookaheadUntilToken(TOKENS.keyword_effect)
+                GATE : () => this.lookaheadUntilToken(TOKENS.keyword_effect) && this.LA(1).tokenType.tokenTypeIdx !== TOKENS.keyword_back_refrence.tokenTypeIdx
             },
             {
                 ALT: () => {
+                    // console.log("Inside next -> pos spec, next tokens are: ", getTokenStream(this as any))
                     const spec = this.SUBRULE2(this.pos_spec)
                     this.ACTION(() => { result = spec })
                 },
-                GATE : () => this.lookaheadUntilToken(TOKENS.keyword_pos)
+                GATE : () => this.lookaheadUntilToken(TOKENS.keyword_pos) && this.LA(1).tokenType.tokenTypeIdx !== TOKENS.keyword_back_refrence.tokenTypeIdx
             },
             {
                 ALT: () => {
+                    // console.log("Inside next -> zone spec, next tokens are: ", getTokenStream(this as any))
                     const spec = this.SUBRULE2(this.zone_spec)
                     this.ACTION(() => { result = spec })
                 },
-                GATE : () => this.lookaheadUntilToken(TOKENS.keyword_zone_name)
+                GATE : () => this.lookaheadUntilToken(TOKENS.keyword_zone_name) && this.LA(1).tokenType.tokenTypeIdx !== TOKENS.keyword_back_refrence.tokenTypeIdx
             },
         ])
         

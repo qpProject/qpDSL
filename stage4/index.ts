@@ -4,13 +4,17 @@ import * as AST from "../core/types"
 import * as ERR from "../core/error"
 import { Pipeline } from "../core/types";
 import { Context } from "../core/Utils/Context";
+import { getTokenStream } from "../core";
 
-const expectCardPipeline = Pipeline.LexParseAST(
+const expectCardPipeline = Pipeline.pipe(Pipeline.LexParseAST(
     lexer,
     parser,
     "expect_card",
     ERR.CannotTokenizeTarget,
-)
+), f => {
+    console.log("Token stream for target classification:", getTokenStream(parser as any))
+    return f
+})
 
 const expectEffectPipeline = Pipeline.LexParseAST(
     lexer,
@@ -40,10 +44,17 @@ const expectPlayerPipeline = Pipeline.LexParseAST(
     ERR.CannotTokenizeTarget
 )
 
-const expectNumberPipeline = Pipeline.LexParseAST(
+const expectSimpleNumberPipeline = Pipeline.LexParseAST(
     lexer,
     parser,
-    "expect_number",
+    "expect_number_simple",
+    ERR.CannotTokenizeTarget
+)
+
+const expectExtendedNumberPipeline = Pipeline.LexParseAST(
+    lexer,
+    parser,
+    "expect_number_extended",
     ERR.CannotTokenizeTarget
 )
 
@@ -62,10 +73,18 @@ const classifyTargetPipeline : Pipeline<AST.ExpectedTarget, AST.InferedTarget> =
         const raw = ctx.raw
         const type = ctx.expectedType
 
+        const tokens = lexer.tokenize(raw).tokens
+        console.log("Classifying target with raw:", raw, "and expected type:", type)
+        console.log("Tokens for target classification:", tokens)
+
         let target : AST.InferedTarget | undefined = undefined
 
         //things already have a type like internal vars and stuff
-        if(ctx instanceof AST.InferedTarget) target = (ctx as any);
+        if(ctx instanceof AST.InferedTarget) {
+            console.log("Target already infered, skipping classification", ctx)
+            target = (ctx as any);
+        }
+
 
         function classifyAST(ctx : AST.ExpectedTarget){
             parser.bindTarget(ctx)
@@ -75,12 +94,15 @@ const classifyTargetPipeline : Pipeline<AST.ExpectedTarget, AST.InferedTarget> =
                 case AST.TargetType.Position: return expectPosPipeline.pipe(raw)
                 case AST.TargetType.Zone: return expectZonePipeline.pipe(raw)
                 case AST.TargetType.Player: return expectPlayerPipeline.pipe(raw)
-                case AST.TargetType.Number: return expectNumberPipeline.pipe(raw)
+                case AST.TargetType.Number: return expectSimpleNumberPipeline.pipe(raw)
                 default: return expectAnythingPipeline.pipe(raw)
             }
         }
 
-        return target || classifyAST(ctx)
+        if(target) return target
+
+        const R = classifyAST(ctx)
+        return R
     }
 }
 
@@ -102,6 +124,8 @@ const classifySegmentPipeline : Pipeline<{
                 try{
                     return classifyTargetPipeline.pipe(t)
                 } catch(e){
+                    Context.in(t)
+                    // throw Context.error( e as any )
                     return undefined
                 }
             })
@@ -116,9 +140,9 @@ const classifySegmentPipeline : Pipeline<{
         }[]
 
         if(!paths.length){
-            Context.in(ctx)
+            // Context.in(ctx)
             //TODO : replace this with more specific error message
-            throw Context.error( new ERR.TargetClassificationError(ctx.raw) )
+            throw Context.error( new ERR.TargetClassificationError(ctx.raw + " AHHHHH" ) )
         }
 
         if(paths.length > 1){
@@ -142,7 +166,7 @@ export const stage4pipeline : Pipeline<
         return ctx instanceof AST.EffectDeclare
     },
     pipe(eff){
-        return eff.map(body => {
+        const newEff = eff.map(body => {
             const newBody = body.map(
                 condition => {
                     return condition.map(cond => {
@@ -173,5 +197,16 @@ export const stage4pipeline : Pipeline<
             )
             return [newBody]
         })
+        newEff.variables = Object.fromEntries(
+            Object.entries(newEff.variables).map(([k, v]) => {
+                if(v instanceof AST.RuntimeVariable && v.value instanceof AST.ExpectedTarget){
+                    parser.bindTarget(v.value)
+                    const inferedTarget = expectExtendedNumberPipeline.pipe(v.value.raw)
+                    return [k, new AST.RuntimeVariable(v.raw, v.name, inferedTarget)] as const
+                }
+                return [k, v]
+            })
+        )
+        return newEff
     }
 }

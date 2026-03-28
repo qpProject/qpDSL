@@ -1,13 +1,5 @@
 import { createToken, Lexer, TokenType } from "chevrotain"
-
-/** Makes a regex which is an "or" of all the words (incluiding the word boundaries), with i flag */
-export function ireg(...s : string[]){
-    s = s.map(str => str.replace(/_/g, " ")) // Convert underscores to spaces
-        .flatMap(s => s.split(" ").map(s => `(${s})`).join("\\s+"))
-        .map(s => `\\b${s}\\b`)
-    s = s.sort((a, b) => b.length - a.length) //sort descending
-    return new RegExp(s.join("|"), "i")
-}
+import { ireg } from "./regUtils"
 
 export class TokenStorage<T extends string = never> {
     private storage : Record<string, TokenType> = {}

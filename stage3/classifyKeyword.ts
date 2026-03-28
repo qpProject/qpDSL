@@ -4,7 +4,7 @@ import { KeywordCategory } from "./keyword_categories";
 import * as ERR from "../core/error"
 
 const KeywordMap : Record<KeywordCategory, string[] | ((s : string) => boolean)> = {} as any
-KeywordMap[KeywordCategory.CARD_STAT] = ["atk", "def", "hp", "level"]
+KeywordMap[KeywordCategory.CARD_STAT] = CONFIG.CARD_STATS
 KeywordMap[KeywordCategory.DAMAGE_TYPE] = ["physical", "magic"]
 KeywordMap[KeywordCategory.EXTENSION] = (s) => s.startsWith(".") && s.length > 1
 KeywordMap[KeywordCategory.EFFECT_ID] = (s) => {

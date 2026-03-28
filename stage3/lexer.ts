@@ -1,5 +1,6 @@
 import { Lexer, } from "chevrotain";
 import { TokenStorage } from "../core"
+import { ID_WITH_DOT_REG } from "../core"
 
 const is_synonyms = [
     "is",
@@ -11,7 +12,7 @@ const is_synonyms = [
 const tokens = new TokenStorage()
 .SKIPPED("whitespace", /\s+/)
 .SYMBOLS("SIGN", /[+-]+/)
-.ID("", /[a-zA-Z0-9_,*<>=?\(\)\[\]\{\}]+|.[a-zA-Z0-9_,*<>=?\(\)\[\]\{\}]+/)
+.ID("", ID_WITH_DOT_REG)
 .OP("is", 
     ...is_synonyms,
     ...is_synonyms.map(s => "not " + s),

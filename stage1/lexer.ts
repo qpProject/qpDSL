@@ -1,31 +1,60 @@
 import { createToken, Lexer } from "chevrotain";
-import { ireg, TokenStorage } from "../core/";
-const FILLER_WORDS = [
-    "would", "could", "should", "can", "may", "might", "must",
-    "the", "a", "an", "then"
-]
+import { ireg, ID_WITH_DOT_REG, TokenStorage } from "../core/";
+import { CONFIG } from "../core/Utils/config";
+const FILLER_WORDS = CONFIG.FILLER_WORDS
+
+const openBrackets = ["(", "[", "{"]
+const closeBrackets = [")", "]", "}"]
+
+function isInsideBracketsBeforeOffset(text : string, offset : number){
+    let stack : string[] = []
+    for(let i = 0; i < offset; i++){
+        if(openBrackets.includes(text[i])){
+            stack.push(text[i])
+        }
+        else if(closeBrackets.includes(text[i])){
+            if(stack.length === 0) continue;
+            const lastOpen = stack[stack.length - 1]
+            if(
+                (lastOpen === "(" && text[i] === ")") ||
+                (lastOpen === "[" && text[i] === "]") ||
+                (lastOpen === "{" && text[i] === "}")
+            ){
+                stack.pop()
+            }
+        }
+    }
+    return stack.length > 0
+}
 
 const sentence_separator = (
     createToken({
         name: "SENTENCE_SEPARATOR",
         pattern: {exec : (text, startOffset) => {
             if(!text) return null;
-            if(
-                text[startOffset] === "." && (
-                    /\s/.test(text[startOffset + 1]) ||
-                    text.length === startOffset + 1
-                )
-            ){
-                return ["."] as RegExpExecArray
+            if(isInsideBracketsBeforeOffset(text, startOffset)) return null;
+            const res = [] as unknown as RegExpExecArray
+            outer : while(startOffset <= text.length){
+                if(/\s/.test(text[startOffset])){
+                    startOffset++
+                    continue outer;
+                }
+
+                inner : for(const sep of CONFIG.VALID_SENTENCE_SEPARATORS){
+                    if(
+                        text.startsWith(sep, startOffset) &&
+                        /\s/.test(text[startOffset + sep.length] || " ")
+                    ){
+                        res.push(sep)
+                        startOffset += sep.length
+                        continue outer;
+                    }
+                }
+
+                // if not space and not separator, break the loop
+                break outer;
             }
-            if(
-                text.slice(startOffset, startOffset + 4) === "then" && (
-                    /\s/.test(text[startOffset + 4]) ||
-                    text.length === startOffset + 4
-                )
-            ){
-                return ["then"] as RegExpExecArray
-            }
+            if(res.length > 0) return [res.join(" ")] as RegExpExecArray;
             return null
         }},
         line_breaks: true
@@ -34,7 +63,7 @@ const sentence_separator = (
 
 const effect_prefix = createToken({
     name : "EFFECT_PREFIX",
-    pattern : /e_/,
+    pattern : /\be_/,
     // pop_mode : true,
     push_mode : "meta_data"
 })
@@ -61,7 +90,7 @@ const tokens_sentences = new TokenStorage()
 //id with dot only allow dot 
 //if there is SOMETHING after the dot
 // else the dot is lex as a sentence_separator
-.ID("_WITH_DOT", /[a-zA-Z0-9_,*!<>=?\(\)\[\]\{\}]+|.[a-zA-Z0-9_,*!<>=?\(\)\[\]\{\}]+/)
+.ID("_WITH_DOT", ID_WITH_DOT_REG)
 
 export const TOKENS = {
     ...tokens_meta_data.createStorageObj(),

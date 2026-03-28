@@ -4,6 +4,7 @@ import type { ASTError } from "../error";
 import type { AstGenParser } from "./AstGenParser";
 import * as ERR from "../error"
 import { Context } from "./Context";
+import { getTokenStream } from "./CstUtils";
 
 export interface Pipeline<T_in = any, T_out = any> {
     accept(context : any) : boolean;
@@ -37,8 +38,9 @@ export class Pipeline {
                 if(tokenStream.errors.length > 0 && lexError){
                     throw Context.error( new lexError(tokenStream.errors[0]) )
                 }
-
+                
                 parser.input = tokenStream.tokens;
+                console.log("Token stream for parser:", getTokenStream(parser as any))
                 return (parser[rule] as () => T_out)() as T_out
             },
         }

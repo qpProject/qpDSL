@@ -1,5 +1,6 @@
 import { Lexer } from "chevrotain";
 import { TokenStorage } from "../core/";
+import { ID_WITH_DOT_REG } from "../core/";
 
 const tokens = new TokenStorage()
 .SKIPPED("WHITESPACE", /\s+/)
@@ -11,7 +12,7 @@ const tokens = new TokenStorage()
 .KEYWORD("is")
 .OP("and")
 .OP("or")
-.ID("", /[a-zA-Z0-9_,*!<>=?\(\)\[\]\{\}]+|.[a-zA-Z0-9_,*!<>=?\(\)\[\]\{\}]+/)
+.ID("", ID_WITH_DOT_REG)
 
 export const TOKENS = tokens.createStorageObj()
 export const ALL_TOKENS = tokens.all
