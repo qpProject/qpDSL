@@ -147,6 +147,7 @@ class Parser extends AstGenParser {
         this.OR([
             {ALT : () => Tok = this.CONSUME(TOKENS.ID_NO_DOT)},
             {ALT : () => Tok = this.CONSUME(TOKENS.ID_WITH_DOT)},
+            {ALT : () => Tok = this.CONSUME(TOKENS.ID_BRACKETED)},
         ])
         return this.ACTION(() => Tok!.image)
     })

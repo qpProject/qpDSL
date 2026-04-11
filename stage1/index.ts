@@ -2,17 +2,21 @@ import { lexer } from "./lexer";
 import { parser } from "./parser";
 import { Pipeline } from "../core/types";
 import { Context } from "../core/Utils/Context";
+import { preprocess } from "./preprocessor";
 
 const stage1pipeline = Pipeline.pipe(
-    Pipeline.LexParseAST(
-        lexer,
-        parser,
-        "program"
-    ),
-    (program) => {
-        for(const eff of program.effects) Context.registerEffectName(eff.name);
-        return program
-    }
+    preprocess,
+    Pipeline.pipe(
+        Pipeline.LexParseAST(
+            lexer,
+            parser,
+            "program"
+        ),
+        (program) => {
+            for(const eff of program.effects) Context.registerEffectName(eff.name);
+            return program
+        }
+    )
 )
 
 export {

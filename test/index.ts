@@ -5,6 +5,7 @@ import { stage1pipeline } from "../stage1";
 import { stage2pipeline } from "../stage2";
 import { stage3pipeline } from "../stage3";
 import { stage4pipeline } from "../stage4";
+import { test } from "./cli";
 
 function parse(str : string){
     Context.clear()
@@ -19,35 +20,11 @@ function parse(str : string){
     }
 }
 
-const basic_test = "e_test.init: draw 2."
+const basic_test = "e_test.init: draw 2, draw 3."
 
 console.log("RUNNING BASIC TEST")
 console.dir( parse(basic_test) , { depth : 20 } )
 console.log("BASIC TEST COMPLETE")
 
-//some light custom CLI to continuously auto test user input
-// commented out since the basic test errors
-const readline = require("readline").createInterface({
-    input : process.stdin,
-    output : process.stdout
-})
-const quitCommands = ["exit", "quit", "q", "--q", "-q", "end", "stop", "cls"]
+test(parse)
 
-readline.setPrompt("Enter a QPDSL sentence (or 'exit' to quit): ")
-
-readline.on('line', (input : string) => {
-    const trimmedInput = input.trim().toLowerCase()
-    if(quitCommands.includes(trimmedInput)){
-        if(trimmedInput === "cls"){
-            console.clear()
-        }
-        readline.close()
-        return;
-    }
-    const result = parse(input)
-    console.dir(result, { depth : 20 })
-    console.log("")
-    readline.prompt()
-})
-
-readline.prompt()

@@ -84,21 +84,19 @@ const tokens_meta_data = new TokenStorage()
 
 const tokens_sentences = new TokenStorage()
 .SKIPPED("WHITESPACE", /\s+/)
-.SKIPPED("FILLER", ireg(...FILLER_WORDS))
 .CUSTOM("SENTENCE", "SEPARATOR", sentence_separator)
 .CUSTOM("EFFECT", "PREFIX", effect_prefix)
 //id with dot only allow dot 
 //if there is SOMETHING after the dot
 // else the dot is lex as a sentence_separator
 .ID("_WITH_DOT", ID_WITH_DOT_REG)
+.ID("_BRACKETED", /\[.*?\]|\(.*?\)|\{.*?\}/)
 
 export const TOKENS = {
     ...tokens_meta_data.createStorageObj(),
     ...tokens_sentences.createStorageObj(),
 }
 
-console.log(Object.keys(TOKENS))
-    
 export const ALL_TOKENS = Object.values(TOKENS)
 
 export const lexer = new Lexer({

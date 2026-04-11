@@ -99,4 +99,3 @@ Targets have types, which can be either:
 To specify a target, you can either **Specify a new target**, **Use a back reference** or **Use this specifier**
 
 ### Specify a new target
-

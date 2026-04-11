@@ -82,7 +82,7 @@ export class ExtensionFlag extends Flag {
 
 export class AnyExtensionFlag extends ExtensionFlag {
     constructor(){
-        super("*")
+        super(".*")
     }
 }
 

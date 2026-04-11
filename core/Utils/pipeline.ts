@@ -12,6 +12,18 @@ export interface Pipeline<T_in = any, T_out = any> {
 }
 
 export class Pipeline {
+    static from<T_in, T_out>(
+        accept : (context : any) => context is T_in,
+        ...funcs : (Pipeline<any, any> | ((context : any) => any))[]
+    ) : Pipeline<T_in, T_out>{
+        return {
+            accept,
+            pipe(context : T_in){
+                return funcs.reduce((acc, f) => Pipeline.exec(acc, f), context) as any as T_out
+            }
+        }
+    }
+
     static LexParseAST<
         T_Parser extends AstGenParser,
         //Note : Idk why i have to do infer _ extends CstNode instead of saying ctx IS an CstNode itself?
@@ -26,12 +38,20 @@ export class Pipeline {
         parser : T_Parser, 
         rule : T_top_level_rule,
         lexError : new (token : ILexingError) => ASTError = ERR.UnknownLexerError,
+        preprocessor? : ((s : string) => string) | Pipeline<string, string>
     ){
         const res : Pipeline<string, T_out> = {
             accept(context) {
-                return typeof context === "string"
+                return typeof context === "string" && (!preprocessor || !(preprocessor instanceof Pipeline) || preprocessor.accept(context))
             },
             pipe(s) {
+                if(preprocessor){
+                    if(preprocessor instanceof Pipeline){
+                        s = Pipeline.exec(s, preprocessor)
+                    } else {
+                        s = preprocessor(s)
+                    }
+                }
                 Context.raw = s
 
                 const tokenStream = lexer.tokenize(s);
