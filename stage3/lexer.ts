@@ -1,6 +1,6 @@
 import { Lexer, } from "chevrotain";
 import { TokenStorage } from "../core"
-import { ID_WITH_DOT_REG } from "../core"
+import { ireg, CONFIG } from "../core";
 
 const is_synonyms = [
     "is",
@@ -12,25 +12,27 @@ const is_synonyms = [
 const tokens = new TokenStorage()
 .SKIPPED("whitespace", /\s+/)
 .SYMBOLS("SIGN", /[+-]+/)
-.ID("", ID_WITH_DOT_REG)
+.ID("", /[a-zA-Z0-9_,*<>=?\(\)\[\]\{\}]+|.[a-zA-Z0-9_,*<>=?\(\)\[\]\{\}]+/)
 .OP("is", 
     ...is_synonyms,
     ...is_synonyms.map(s => "not " + s),
     ...is_synonyms.map(s => s + " not"),
 )
-.KEYWORD("instead")
 .KEYWORD("card", "cards")
 .KEYWORD("effect", "effects")
 .KEYWORD("zone", "zones")
 .KEYWORD("pos", "position", "positions")
 .KEYWORD("player", "players", "enemy", "enemies")
 .KEYWORD("action")
+
+.KEYWORD("instead")
 .KEYWORD("exist", "exists", "existed")
 .KEYWORD("has", "have", "had", "own", "owns", "owned")
 .KEYWORD("turn", "turns")
 .KEYWORD("start")
 .KEYWORD("end")
 .KEYWORD("reprogram", "reprograms", "reprogramed")
+.KEYWORD("force", "forces", "forced")
 .KEYWORD("lose", "lost", "loses")
 .KEYWORD("negate", "negates", "negated")
 .KEYWORD("remove", "removes", "removed")
@@ -51,17 +53,27 @@ const tokens = new TokenStorage()
 .KEYWORD("shuffle", "shuffles", "shuffled")
 .KEYWORD("add", "adds", "added")
 .KEYWORD("receive", "receives", "received", "gain", "gains", "gained")
+.KEYWORD("extension", "extensions")
 .KEYWORD("override", "overrides", "overriden")
 .KEYWORD("change", "changes", "changed")
 .KEYWORD("heal", "heals", "healed", "healing")
 .KEYWORD("duplicate", "duplicates", "duplicated")
+.KEYWORD("attack", "attacks")
+.KEYWORD("lock", "locks", "locked")
+.KEYWORD("cannot", "can't", "cant")
+.KEYWORD("to")
 .KEYWORD("current")
 .KEYWORD("from")
 .KEYWORD("by")
-.KEYWORD("to")
 .KEYWORD("heart")
 .KEYWORD("of")
 .KEYWORD("with")
+.KEYWORD("time")
+.KEYWORD("times")
+.KEYWORD("no")
+.KEYWORD("more")
+.KEYWORD("less")
+.KEYWORD("than")
 .KEYWORD("count")
 .KEYWORD("number")
 .KEYWORD("on")

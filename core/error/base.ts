@@ -26,6 +26,7 @@ export abstract class ASTError extends Error {
 
     constructor(){
         super(`Unknown Error at stage`);
+        this.name = `Error at stage`
     }
 
     blame(...node : (ASTNode | string)[]) : void {
@@ -47,6 +48,10 @@ export abstract class ASTError extends Error {
         }
         
         if (typeof value === 'object') {
+            if("stringify" in value && typeof value.stringify === "function"){
+                return value.stringify().join("\n")
+            }
+
             const keys = Object.keys(value).slice(0, maxArrayLength);
             const items = keys.map(k => `${k}: ${this.formatValue(value[k], depth - 1, maxArrayLength)}`);
             if (Object.keys(value).length > maxArrayLength) items.push(`... +${Object.keys(value).length - maxArrayLength} more`);
@@ -64,12 +69,15 @@ export abstract class ASTError extends Error {
             result += "\n"
             result += arrowStr
             if(typeof node === "string"){
-                result += `At : (str)"${node}"\n`
+                result += `At : (str):\n"${node}"\n`
             }
             else {
                 const str = this.formatValue(node)
-                result += `At : (node)"${str}"\n`
+                result += `At : (node):\n${str}\n`
             }
+        }
+        if(this.causeStack.length === 0){
+            result += "\n(No location information available)"
         }
         return result
     }

@@ -1,6 +1,8 @@
 import type { ASTNode } from "../types/generic";
 import { ASTError } from "./base";
-import type { PartialMatch } from "../../stage3";
+import { lexer, type PartialMatch } from "../../stage3";
+import { IToken } from "chevrotain";
+import { Pipeline } from "../types";
 
 //
 class EffectDeclareError extends ASTError {
@@ -33,7 +35,7 @@ export class EffectHasMultipleTypesError extends EffectDeclareError {
 
 export class EffectHasInvalidNameError extends EffectDeclareError {
     constructor(effectName: string) {
-        super(`Effect declaration has invalid name: ${effectName}`);
+        super(`Effect declaration has invalid name: ${effectName}, perhaps you are missing the prefix 'e_'?`);
         this.name = "Effect Has Invalid Name";
     }
 }
@@ -100,6 +102,15 @@ class ActionClassificationError extends ASTError {
 export class FailToClassifyActionError extends ActionClassificationError {
     constructor(raw : string, longestPaths : PartialMatch[]){
         let errStr = `No action template matched for action "${raw}"`
+        
+        let tokens : IToken[] = []
+        try{
+            tokens = Pipeline.exec(raw, Pipeline.lex(lexer))
+            errStr += `\nLexer output tokens: ${tokens.map(t => t.image + "(" + t.tokenType.name + ")").join(", ")}`
+        }catch(e){
+            errStr += `\nLexer failed`
+        }
+
         if(longestPaths.length === 0) errStr += "<No matches found?>"
         else {
             for(const p of longestPaths){
@@ -123,9 +134,9 @@ export class TargetClassificationError extends ASTError {
 }
 
 export class TargetTypeConflictError extends TargetClassificationError {
-    constructor(){
-        super(`Target has conflicting types (infered type is not expected type)`);
-        this.name = "ST2.TargetTypeConflictError";
+    constructor(public t_expect : string, public t_infered : string){
+        super(`Target type conflict: expected ${t_expect}, infered ${t_infered}`);
+        this.name = "Target Type Conflict Error";
     }
 }
 
@@ -142,5 +153,26 @@ export class CannotBindBackreferenceError extends TargetClassificationError {
     constructor(backrefRaw : string){
         super(`Cannot bind backreference: ${backrefRaw}`);
         this.name = "CannotBindBackreferenceError";
+    }
+}
+
+export class UnknownVariableError extends TargetClassificationError {
+    constructor(variableName : string, availableVariables : string[]){
+        super(`Unknown variable: ${variableName}, available variables: ${availableVariables.join(", ")}`);
+        this.name = "UnknownVariableError";
+    }
+}
+
+export class CanmotUseThisOperatorError extends TargetClassificationError {
+    constructor(operator : string, allowed: string[]){
+        super(`Cannot use operator ${operator}, allowed operators: ${allowed.join(", ")}`);
+        this.name = "CannotUseThisOperatorError";
+    }
+}
+
+export class DuplicatedFromClauseError extends TargetClassificationError {
+    constructor(from1 : string, from2 : string, on : string){
+        super(`From clause redeclared, appeared once at ${from1}, appeared again at ${from2}, on card ${on}`)
+        this.name = `DuplicatedFromClauseError`
     }
 }

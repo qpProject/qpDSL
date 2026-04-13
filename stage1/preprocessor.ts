@@ -8,9 +8,9 @@ function remove_comments(code: string): string {
     )
 }
 
-function lowercase(code : string): string {
-    return code.toLowerCase()
-}
+// function lowercase(code : string): string {
+//     return code.toLowerCase()
+// }
 
 function remove_filler_words(code : string): string {
     const fillerWordsPattern = new RegExp(`\\b(${CONFIG.FILLER_WORDS.join("|")})\\b`, "g")
@@ -24,7 +24,7 @@ function remove_extra_whitespace(code : string): string {
 export const preprocess = Pipeline.from<string, string>(
     (x) => typeof x === "string",
     remove_comments, 
-    lowercase, 
+    // lowercase, 
     remove_filler_words, 
     remove_extra_whitespace,
 )

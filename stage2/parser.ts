@@ -11,6 +11,10 @@ class Parser extends AstGenParser {
         this.performSelfAnalysis()
     }
 
+    override get isBounded(): boolean {
+        return true
+    }
+
     private Sentence(keyword : TokenType | undefined, constructor : new (raw : string, segments : AST.SentenceSegment[]) => AST.Sentence){
         this.beginRecordTokens()
 

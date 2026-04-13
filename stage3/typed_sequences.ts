@@ -8,6 +8,12 @@ export const data = {
         "keyword_reprogram"
     ],
     a_force_end_game_0 : [
+        "keyword_force",
+        TargetType.Player,
+        "keyword_to",
+        "keyword_lose"
+    ],
+    a_force_end_game_1 : [
         TargetType.Player,
         "op_is",
         "keyword_lose"
@@ -275,6 +281,165 @@ export const data = {
         TargetType.Card,
         "keyword_to",
         TargetType.Zone
+    ],
+    a_attack_0 : [
+        "keyword_attack",
+        TargetType.Number
+    ],
+    a_attack_1 : [
+        "keyword_attack",
+        TargetType.Number,
+        "keyword_time"
+    ],
+    a_attack_2 : [
+        "keyword_attack",
+        TargetType.Number,
+        "keyword_times"
+    ],
+    a_attack_3 : [
+        "keyword_attack",
+        "keyword_with",
+        TargetType.Number,
+        "keyword_damage",
+        TargetType.Number
+    ],
+    a_attack_4 : [
+        "keyword_attack",
+        "keyword_with",
+        TargetType.Number,
+        KeywordCategory.DAMAGE_TYPE,
+        "keyword_damage",
+        TargetType.Number
+    ],
+    a_attack_5 : [
+        "keyword_attack",
+        "keyword_with",
+        TargetType.Number,
+        "keyword_damage",
+        TargetType.Number,
+        "keyword_time"
+    ],
+    a_attack_6 : [
+        "keyword_attack",
+        "keyword_with",
+        TargetType.Number,
+        KeywordCategory.DAMAGE_TYPE,
+        "keyword_damage",
+        TargetType.Number,
+        "keyword_time"
+    ],
+    a_attack_7 : [
+        "keyword_attack",
+        "keyword_with",
+        TargetType.Number,
+        "keyword_damage",
+        TargetType.Number,
+        "keyword_times"
+    ],
+    a_attack_8 : [
+        "keyword_attack",
+        "keyword_with",
+        TargetType.Number,
+        KeywordCategory.DAMAGE_TYPE,
+        "keyword_damage",
+        TargetType.Number,
+        "keyword_times"
+    ],
+    a_lock_0 : [
+        "keyword_lock"
+    ],
+    a_damage_prevent_0 : [
+        TargetType.Card,
+        "keyword_cannot",
+        "keyword_take",
+        "keyword_more",
+        "keyword_than",
+        TargetType.Number,
+        "keyword_damage"
+    ],
+    a_damage_prevent_1 : [
+        TargetType.Card,
+        "keyword_cannot",
+        "keyword_take",
+        "keyword_no",
+        "keyword_more",
+        "keyword_than",
+        TargetType.Number,
+        "keyword_damage"
+    ],
+    a_damage_prevent_2 : [
+        TargetType.Card,
+        "keyword_cannot",
+        "keyword_take",
+        "keyword_less",
+        "keyword_than",
+        TargetType.Number,
+        "keyword_damage"
+    ],
+    a_damage_prevent_3 : [
+        TargetType.Card,
+        "keyword_cannot",
+        "keyword_take",
+        "keyword_no",
+        "keyword_less",
+        "keyword_than",
+        TargetType.Number,
+        "keyword_damage"
+    ],
+    a_damage_prevent_4 : [
+        TargetType.Card,
+        "keyword_cannot",
+        "keyword_take",
+        "keyword_more",
+        "keyword_than",
+        TargetType.Number,
+        KeywordCategory.DAMAGE_TYPE,
+        "keyword_damage"
+    ],
+    a_damage_prevent_5 : [
+        TargetType.Card,
+        "keyword_cannot",
+        "keyword_take",
+        "keyword_no",
+        "keyword_more",
+        "keyword_than",
+        TargetType.Number,
+        KeywordCategory.DAMAGE_TYPE,
+        "keyword_damage"
+    ],
+    a_damage_prevent_6 : [
+        TargetType.Card,
+        "keyword_cannot",
+        "keyword_take",
+        "keyword_less",
+        "keyword_than",
+        TargetType.Number,
+        KeywordCategory.DAMAGE_TYPE,
+        "keyword_damage"
+    ],
+    a_damage_prevent_7 : [
+        TargetType.Card,
+        "keyword_cannot",
+        "keyword_take",
+        "keyword_no",
+        "keyword_less",
+        "keyword_than",
+        TargetType.Number,
+        KeywordCategory.DAMAGE_TYPE,
+        "keyword_damage"
+    ],
+    a_damage_prevent_8 : [
+        TargetType.Card,
+        "keyword_take",
+        "keyword_no",
+        "keyword_damage"
+    ],
+    a_damage_prevent_9 : [
+        TargetType.Card,
+        "keyword_take",
+        "keyword_no",
+        KeywordCategory.DAMAGE_TYPE,
+        "keyword_damage"
     ],
     cond_count_0 : [
         "keyword_count",
@@ -626,24 +791,31 @@ export const data = {
         "keyword_shuffle"
     ],
     a_add_status_effect_4 : [
+        "keyword_extension",
+        "keyword_of",
+        TargetType.Card,
+        "op_is",
+        "keyword_change"
+    ],
+    a_add_status_effect_5 : [
         TargetType.Card,
         "keyword_receive",
         KeywordCategory.CARD_STAT
     ],
-    a_add_status_effect_5 : [
+    a_add_status_effect_6 : [
         TargetType.Card,
         "keyword_receive",
         "SYMBOL_SIGN",
         KeywordCategory.CARD_STAT
     ],
-    a_add_status_effect_6 : [
+    a_add_status_effect_7 : [
         KeywordCategory.CARD_STAT,
         "keyword_of",
         TargetType.Card,
         "op_is",
         "keyword_override"
     ],
-    a_add_status_effect_7 : [
+    a_add_status_effect_8 : [
         KeywordCategory.CARD_STAT,
         "keyword_of",
         TargetType.Card,
@@ -652,21 +824,21 @@ export const data = {
         "keyword_to",
         TargetType.Number
     ],
-    a_add_status_effect_8 : [
+    a_add_status_effect_9 : [
         KeywordCategory.CARD_STAT,
         "keyword_of",
         TargetType.Card,
         "op_is",
         "keyword_change"
     ],
-    a_add_status_effect_9 : [
+    a_add_status_effect_10 : [
         "keyword_stat",
         "keyword_of",
         TargetType.Card,
         "op_is",
         "keyword_change"
     ],
-    a_add_status_effect_10 : [
+    a_add_status_effect_11 : [
         TargetType.Card,
         "keyword_receive",
         "keyword_heal",

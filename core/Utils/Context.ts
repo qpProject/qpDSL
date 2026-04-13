@@ -5,6 +5,7 @@ import type { AnyInferedTarget } from "../types";
 import { getNodeTextDesperate } from "./CstUtils";
 
 class ContextClass {
+    readonly stagedAdvaned : number = -1
     readonly allEffectNames : string[] = []
 
     registerEffectName(name : string){
@@ -48,7 +49,16 @@ class ContextClass {
     clear(){
         (this as any).stack = [];
         (this as any).cachedTargets = [];
+        (this as any).stagedAdvaned = -1;
         this.currentRaw = ""
+    }
+
+    advanceStage(stage? : number){
+        (this as any).stagedAdvaned = stage !== undefined ? stage : this.stagedAdvaned + 1
+    }
+
+    clearCache(){
+        (this as any).cachedTargets = [];
     }
 
     getNodeText(node : CstNode){

@@ -5,6 +5,7 @@ import type { AstGenParser } from "./AstGenParser";
 import * as ERR from "../error"
 import { Context } from "./Context";
 import { getTokenStream } from "./CstUtils";
+import { CONFIG } from "./config";
 
 export interface Pipeline<T_in = any, T_out = any> {
     accept(context : any) : boolean;
@@ -59,8 +60,12 @@ export class Pipeline {
                     throw Context.error( new lexError(tokenStream.errors[0]) )
                 }
                 
+                if(!parser.isBounded){
+                    throw Context.error( new Error("Parser must be bounded") )
+                }
+
                 parser.input = tokenStream.tokens;
-                console.log("Token stream for parser:", getTokenStream(parser as any))
+                if(CONFIG.VERBOSE) console.log("Token stream for parser:", getTokenStream(parser as any));
                 return (parser[rule] as () => T_out)() as T_out
             },
         }
@@ -86,9 +91,10 @@ export class Pipeline {
     }
 
     static exec<T_in, T_out>(input : T_in, p : (Pipeline<T_in, T_out> | ((context : T_in) => T_out))) : T_out {
+        if(CONFIG.VERBOSE) console.log("Executing pipeline with input:", input);
         if(typeof p === "function") return p(input);
         if(!p.accept(input)) {
-            console.log("Pipeline rejected context:", input)
+            if(CONFIG.VERBOSE) console.log("Pipeline rejected context:", input);
             console.log("Offending pipeline:", {
                 accept : p.accept.toString(), 
                 pipe: p.pipe.toString()

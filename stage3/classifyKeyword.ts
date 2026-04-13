@@ -10,7 +10,7 @@ KeywordMap[KeywordCategory.EXTENSION] = (s) => s.startsWith(".") && s.length > 1
 KeywordMap[KeywordCategory.EFFECT_ID] = (s) => {
     if(s.startsWith("e_")){
         if(!Context.allEffectNames.includes(s)) {
-            Context.error(new ERR.EffectNameNotFoundError(s))
+            throw Context.error(new ERR.EffectNameNotFoundError(s))
         }
         return true
     }
@@ -36,7 +36,19 @@ export function isCategory(str : string, ...category : KeywordCategory[]){
     return false
 }
 
-export function mapCategoryIfPossible(str : string, ...category : KeywordCategory[]) : KeywordCategory | undefined {
+export function mapCategoryIfPossible(
+    str : string, 
+    category : KeywordCategory[] = [
+        KeywordCategory.CARD_STAT,
+        KeywordCategory.DAMAGE_TYPE,
+        KeywordCategory.EXTENSION,
+        KeywordCategory.EFFECT_ID,
+        KeywordCategory.EFFECT_MODIFIER,
+        KeywordCategory.PLAYER_STAT,
+        KeywordCategory.EFFECT_TYPE,
+        KeywordCategory.EFFECT_SUBTYPE
+    ]
+) : KeywordCategory | undefined {
     for(const c of category){
         const v = KeywordMap[c]
         if(Array.isArray(v)){

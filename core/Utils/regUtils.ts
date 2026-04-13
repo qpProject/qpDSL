@@ -41,6 +41,10 @@ export function orRegs(...regs : RegExp[]){
 
 export const ID_WITHOUT_DOT_REG = symbolRegMany(...CONFIG.ALLOWED_SYMBOLS_IN_SENTENCES, "a-z", "A-Z", "0-9")
 
+const bracket_reg1 = /\[.*?\]/
+const bracket_reg2 = /\(.*?\)/
+const bracket_reg3 = /\{.*?\}/
+
 export const ID_WITH_DOT_REG = orRegs(
     //reg no dor
     ID_WITHOUT_DOT_REG,
@@ -48,5 +52,6 @@ export const ID_WITH_DOT_REG = orRegs(
     mergeRegs(
         /\./,
         ID_WITHOUT_DOT_REG
-    )
+    ),
+    orRegs(bracket_reg1, bracket_reg2, bracket_reg3)
 )

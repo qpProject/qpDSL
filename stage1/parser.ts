@@ -7,16 +7,26 @@ import { ASTNode } from "../core/types";
 import { Context } from "../core/Utils/Context";
 import { CONFIG } from "../core/Utils/config";
 
+//Parse int but allows Infinity and NaN
+function parseNumber(text : string) : number {
+    if(text === "Infinity") return Infinity
+    if(text === "-Infinity") return -Infinity
+    return Number.parseInt(text)
+}
+
 class Parser extends AstGenParser {
     constructor(){
         super(ALL_TOKENS, { nodeLocationTracking: 'onlyOffset' })
         this.performSelfAnalysis()
     }
 
+    override get isBounded(): boolean {
+        return true
+    }
+
     program = this.RULE("program", () => {
         this.ACTION(() => {
             const tokenStream = getTokenStream(this as any)
-            console.log("Token stream", tokenStream)
         })
 
         const E : AST.EffectDeclare[] = []
@@ -34,11 +44,23 @@ class Parser extends AstGenParser {
     effect_decl = this.RULE("effect_decl", () => {
         this.beginRecordTokens()
 
-        const EffNamePrefix = this.CONSUME(TOKENS.EFFECT_PREFIX)
-        const EffNameContent = this.CONSUME(TOKENS.ID_NO_DOT)
-        const EffName = EffNamePrefix.image + EffNameContent.image
-        this.CONSUME(TOKENS.SYMBOL_DOT)
-        const MetaData = this.SUBRULE(this.effect_meta_data)
+        const $ = this
+        let EffNamePrefix = {image : ""}
+        this.OPTION(() => {
+            EffNamePrefix = this.CONSUME(TOKENS.EFFECT_PREFIX)
+        })
+        const EffNameContent = this.SUBRULE(this.ID)
+        const EffName = EffNamePrefix.image + EffNameContent
+
+        let MetaData = {
+            variables : [] as AST.InternalVariable[],
+            types : [] as string[],
+        }
+        this.OPTION1(() => {
+            this.CONSUME(TOKENS.SYMBOL_DOT)
+            MetaData = this.SUBRULE(this.effect_meta_data)
+        })
+
         this.CONSUME(TOKENS.SYMBOL_COLON)
         // PLS DO NOT
         // change this to AT_LEAST_ONE
@@ -67,7 +89,6 @@ class Parser extends AstGenParser {
 
         
         return this.ACTION(() => {
-            console.log("Metadata", { EffName, MetaData })
             return AST.EffectDeclare.fromMetaData(
                 info.raw, EffName, [...MetaData.variables, ...MetaData.types], S, {
                     validTypes : CONFIG.EFFECT_TYPES,
@@ -85,13 +106,13 @@ class Parser extends AstGenParser {
 
         const Values : number[] = []
         let ValueToken = this.CONSUME1(TOKENS.ID_NO_DOT)
-        this.ACTION(() => Values.push(Number.parseInt(ValueToken.image)))
+        this.ACTION(() => Values.push(parseNumber(ValueToken.image)))
         
         
         this.MANY(() => {
             this.CONSUME(TOKENS.SYMBOL_ARROW)
             ValueToken = this.CONSUME2(TOKENS.ID_NO_DOT)
-            this.ACTION(() => Values.push(Number.parseInt(ValueToken.image)))
+            this.ACTION(() => Values.push(parseNumber(ValueToken.image)))
         })
 
         const info = this.endRecordTokens()
@@ -121,11 +142,10 @@ class Parser extends AstGenParser {
                     }},
                 ])
             },
-            SEP : TOKENS.SYMBOL_DOT
+            SEP : TOKENS.SYMBOL_DOT,
         })
 
         return this.ACTION(() => {
-            console.log("Meta data", { Vars, Types })
             return {
                 variables : Vars,
                 types : Types,
@@ -147,7 +167,7 @@ class Parser extends AstGenParser {
         this.OR([
             {ALT : () => Tok = this.CONSUME(TOKENS.ID_NO_DOT)},
             {ALT : () => Tok = this.CONSUME(TOKENS.ID_WITH_DOT)},
-            {ALT : () => Tok = this.CONSUME(TOKENS.ID_BRACKETED)},
+            {ALT : () => Tok = this.CONSUME(TOKENS.ID_UNKNOWN)},
         ])
         return this.ACTION(() => Tok!.image)
     })

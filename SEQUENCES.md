@@ -23,6 +23,7 @@ This document lists all action definitions with their creation and intercept/con
 | a_turn_start | start | — | turn start |
 | a_turn_end | end | — | turn end |
 | a_reprogram_start | reprogram reprograms reprogramed | reprogram |  |
+| a_force_end_game | force forces forced | force player to lose |  |
 | a_force_end_game | lose lost loses | player is lost |  |
 | a_negate | negate negates negated | negate current action! |  |
 | a_remove_effect | remove removes removed | remove effect from card |  |
@@ -46,7 +47,8 @@ This document lists all action definitions with their creation and intercept/con
 | a_draw | — | turn draw {0}? (card|card!)? | player turn draw |
 | a_shuffle | shuffle shuffles shuffled | shuffle zone | zone is? shuffled |
 | a_add_status_effect | add adds added | add +-{0} CARD_STAT to card |  |
-| a_add_status_effect | receive receives received gain gains gained | add EXTENSION to card | card received (+-{0})? CARD_STAT |
+| a_add_status_effect | receive receives received gain gains gained | add EXTENSION to card | extension of card is changed |
+| a_add_status_effect | extension extensions | — | card received (+-{0})? CARD_STAT |
 | a_add_status_effect | override overrides overriden | override CARD_STAT of card to {0} | CARD_STAT of card is overriden (to {0})? |
 | a_add_status_effect | change changes changed | — | (CARD_STAT|stat) of card is changed |
 | a_add_status_effect | heal heals healed healing | heal card by {0} | card received healing of {0} |
@@ -56,6 +58,11 @@ This document lists all action definitions with their creation and intercept/con
 | a_remove_effect | — | remove effect | effect is removed |
 | a_remove_status_effect | — | remove {0} CARD_STAT from card | {0} CARD_STAT is removed from card |
 | a_duplicate_card | — | duplicate card to (pos | zone) | card is duplicated (to (pos | zone))? |
+| a_attack | attack attacks | attack {0} (time|times)? |  |
+| a_attack | — | attack with {0} DAMAGE_TYPE? damage {0} (time|times)? |  |
+| a_lock | lock locks locked | lock |  |
+| a_damage_prevent | cannot can't cant | card cannot take no? (more|less) than {0} DAMAGE_TYPE? damage |  |
+| a_damage_prevent | — | card takes no DAMAGE_TYPE? damage |  |
 | — | — | — | — |
 
 
@@ -78,10 +85,10 @@ The following keyword categories are defined:
 
 ## Statistics
 
-- **Total Actions:** 47
+- **Total Actions:** 54
 - **Total Keyword Categories:** 8
-- **Total Creation Sequence Patterns:** 38
-- **Total Intercept Sequence Patterns:** 55
+- **Total Creation Sequence Patterns:** 61
+- **Total Intercept Sequence Patterns:** 62
 
 ---
 

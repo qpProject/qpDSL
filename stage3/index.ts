@@ -14,21 +14,32 @@ import { data as data_typed } from "./typed_sequences"
 import { data as data_untyped } from "./untyped_sequences"
 import { Context } from "../core/Utils/Context"
 import { TargetType } from "../core/types"
-import { isCategory } from "./classifyKeyword"
+import { isCategory, mapCategoryIfPossible } from "./classifyKeyword"
+import { CONFIG } from "../core"
 
 function classify(
     ctx : AST.ASTNode, 
     type : "condition" | "creation",
     raw = ctx.raw,
     tokens : IToken[] = Pipeline.exec(raw, Pipeline.lex(lexer)),
-    tokenTypes = tokens.map(t => t.tokenType.name)
+    tries = 0
 ) : {
     action_name : string,
-    targets : AST.ExpectedTarget[]
+    targets : AST.ExpectedTarget[],
 }[]{
+    // console.log(".....")
+    const tokenTypes = tokens.map((t, i) => {
+        const cat = mapCategoryIfPossible(t.image)
+        if(cat && i < tries) return cat
+        return t.tokenType.name
+    })
+
     const [bestMatch, bestPartialMatch] = lookup(tokenTypes, type)
     if(!bestMatch.length){
-        throw Context.error( new ERR.FailToClassifyActionError(raw, bestPartialMatch) )
+        if(tries >= tokens.length){
+            throw Context.error( new ERR.FailToClassifyActionError(raw, bestPartialMatch) )
+        }
+        return classify(ctx, type, raw, tokens, tries + 1)
     }
     const pair = bestMatch.flatMap(m => m.matched_action.map(name => [
         name, 
@@ -53,13 +64,13 @@ function classify(
             })
             .filter(x => x !== undefined) as any
 
-        console.log(`Inside ${type} classifier, info`, {
+        if(CONFIG.VERBOSE) console.log(`Inside ${type} classifier, info`, {
             raws,
             action_name,
             types_sequence,
             classification_path : classificationResults.path,
             targets_types : T
-        })
+        });
 
         return {
             action_name,
@@ -110,9 +121,7 @@ const actionClassifierPipeline : Pipeline<AST.SentenceSegment, AST.ActionSegment
             tokens.shift()
         }
 
-        const tokenTypes = tokens.map(t => t.tokenType.name)
-
-        const targets = classify(ctx, "creation", raw, tokens, tokenTypes)
+        const targets = classify(ctx, "creation", raw, tokens)
         return new AST.ActionSegment(ctx, targets, isInstead)
     }
 }

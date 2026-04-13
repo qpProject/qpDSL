@@ -10,6 +10,14 @@ export class InferedTarget extends ExpectedTarget {
     ){
         super(oldTarget.raw, oldTarget.expectedType)
     }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent || 0
+        const typeStr = TargetType[this.inferredType]
+        return [
+            `${" ".repeat(ind)}Infered target: ${typeStr}`,
+        ]
+    }
 }
 
 // ===== Keyword classification =====
@@ -19,7 +27,12 @@ export class KeywordTarget extends InferedTarget {
         raw : string,
         public category : KeywordCategory
     ){
-        super({raw} as any, TargetType.Keyword)
+        super(new ExpectedTarget(raw, TargetType.Keyword), TargetType.Keyword)
+    }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        return [`${" ".repeat(ind)}Keyword: ${this.raw}(${this.category})`]
     }
 }
 
@@ -32,6 +45,11 @@ export class VarReference extends InferedTarget {
     ){
         super(oldTarget, TargetType.Number)
     }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        return [`${" ".repeat(ind)}Variable reference: ${this.name}`]
+    }
 }
 
 export class INT_LIT extends InferedTarget {
@@ -41,6 +59,11 @@ export class INT_LIT extends InferedTarget {
     ){
         super(oldTarget, TargetType.Number)
     }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        return [`${" ".repeat(ind)}Integer literal: ${this.amount}`]
+    }
 }
 
 export class AmountSpec {
@@ -48,13 +71,31 @@ export class AmountSpec {
         public amount: INT_LIT | VarReference | "all", 
         public operator: AmountModifier = AmountModifier.EQ
     ){}
+
+    stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        const opStr = AmountModifier[this.operator]
+        const strs: string[] = []
+        strs.push(`${" ".repeat(ind)}Amount: ${opStr}`)
+        if (typeof this.amount !== "string") {
+            strs.push(...this.amount.stringify(ind + 2))
+        } else {
+            strs.push(`${" ".repeat(ind + 2)}${this.amount}`)
+        }
+        return strs
+    }
 }
 
 export class OrderSpec extends AmountSpec {
     constructor(
         public order : number,
     ){
-        super(new INT_LIT({raw : "1"} as any, 1))
+        super(new INT_LIT({raw : order.toString()} as any, order))
+    }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        return [`${" ".repeat(ind)}Order: ${this.order}`]
     }
 }
 
@@ -64,19 +105,40 @@ export class DirectionSpec {
     constructor(
         public directions: Direction[]
     ){}
+
+    stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        const dirStr = this.directions.map(d => Direction[d]).join(", ")
+        return [`${" ".repeat(ind)}Directions: ${dirStr}`]
+    }
 }
 
 // ===== Flags =====
 
-export class Flag {}
+export class Flag {
+    stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        return [`${" ".repeat(ind)}Flag`]
+    }
+}
 
 // Card Flags
-export class RandomFlag extends Flag {}
+export class RandomFlag extends Flag {
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        return [`${" ".repeat(ind)}Random flag`]
+    }
+}
 
 /**Extension name have the dot upfront */
 export class ExtensionFlag extends Flag {
     constructor(public extensionName: string){
         super()
+    }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        return [`${" ".repeat(ind)}Extension: ${this.extensionName}`]
     }
 }
 
@@ -84,17 +146,32 @@ export class AnyExtensionFlag extends ExtensionFlag {
     constructor(){
         super(".*")
     }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        return [`${" ".repeat(ind)}Any extension`]
+    }
 }
 
 export class RarityFlag extends Flag {
     constructor(public rarityValue: string){
         super()
     }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        return [`${" ".repeat(ind)}Rarity: ${this.rarityValue}`]
+    }
 }
 
 export class ArchetypeFlag extends Flag {
     constructor(public archetypeName: string){
         super()
+    }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        return [`${" ".repeat(ind)}Archetype: ${this.archetypeName}`]
     }
 }
 
@@ -109,6 +186,19 @@ export class PropertyValueFLag extends Flag {
     ){
         super()
     }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        const strs: string[] = []
+        strs.push(`${" ".repeat(ind)}Property: ${this.statName}`)
+        if (this.requiredValue) {
+            strs.push(...this.requiredValue.stringify(ind + 2))
+        }
+        if (this.overrideTarget) {
+            strs.push(`${" ".repeat(ind + 2)}Override target:`, ...(this.overrideTarget as any).stringify(ind + 3))
+        }
+        return strs
+    }
 }
 
 export class RowFlag extends PropertyValueFLag {
@@ -117,6 +207,19 @@ export class RowFlag extends PropertyValueFLag {
         overrideTarget? : AnyInferedTarget | Backreference
     ){
         super("row", requiredValue, overrideTarget)
+    }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        const strs: string[] = []
+        strs.push(`${" ".repeat(ind)}Row flag`)
+        if (this.requiredValue) {
+            strs.push(...this.requiredValue.stringify(ind + 2))
+        }
+        if (this.overrideTarget) {
+            strs.push(`${" ".repeat(ind + 2)}Override target:`, ...(this.overrideTarget as any).stringify(ind + 3))
+        }
+        return strs
     }
 }
 
@@ -127,11 +230,29 @@ export class ColFlag extends PropertyValueFLag {
     ){
         super("column", requiredValue, overrideTarget)
     }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        const strs: string[] = []
+        strs.push(`${" ".repeat(ind)}Column flag`)
+        if (this.requiredValue) {
+            strs.push(...this.requiredValue.stringify(ind + 2))
+        }
+        if (this.overrideTarget) {
+            strs.push(`${" ".repeat(ind + 2)}Override target:`, ...(this.overrideTarget as any).stringify(ind + 3))
+        }
+        return strs
+    }
 }
 
 export class PlayerFlag extends Flag {
     constructor(public playerName: string, public playerIndex: number = 1){
         super()
+    }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        return [`${" ".repeat(ind)}Player: ${this.playerName} (index ${this.playerIndex})`]
     }
 }
 
@@ -140,11 +261,21 @@ export class EffectTypeFlag extends Flag {
     constructor(public effectType: string){
         super()
     }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        return [`${" ".repeat(ind)}Effect type: ${this.effectType}`]
+    }
 }
 
 export class EffectSubtypeFlag extends Flag {
     constructor(public effectSubtype: string){
         super()
+    }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        return [`${" ".repeat(ind)}Effect subtype: ${this.effectSubtype}`]
     }
 }
 
@@ -276,7 +407,7 @@ export class Backreference extends InferedTarget {
                         cond &&= target.withClauses.some(twc => twc.effect && this.isTargetOfShape(swc.effect!, twc.effect))
                     }
                     if(swc.stat){
-                        cond &&= target.withClauses.some(twc => twc.stat && twc.stat.statName === swc.stat!.statName && this.compareAmountSpec(swc.stat!.statValue, twc.stat.statValue))
+                        cond &&= target.withClauses.some(twc => twc.stat && twc.stat.statName === swc.stat!.statName && (swc.stat!.statValue && twc.stat!.statValue && this.compareAmountSpec(swc.stat!.statValue, twc.stat.statValue)))
                     }
                     return cond
                 })
@@ -342,11 +473,24 @@ export class Backreference extends InferedTarget {
         ) return new BackreferenceBounded(this, potentialTarget)
         else return undefined
     }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        const strs: string[] = []
+        strs.push(`${" ".repeat(ind)}Backreference:`)
+        strs.push(`${" ".repeat(ind + 2)}Shape:`, ...this.shape.stringify(ind + 3))
+        return strs
+    }
 }
 
 export class AnyBackreference extends Backreference {
     constructor(raw : string){
         super(raw, new InferedTarget(new ExpectedTarget(raw, TargetType.Any), TargetType.Any))
+    }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        return [`${" ".repeat(ind)}Any backreference`]
     }
 }
 
@@ -357,6 +501,14 @@ export class BackreferenceBounded extends Backreference {
     ){
         super(uninfered.raw, uninfered.shape)
     }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        const strs: string[] = []
+        strs.push(`${" ".repeat(ind)}Backreference bounded:`)
+        strs.push(`${" ".repeat(ind + 2)}Infered target:`, ...this.inferedTarget.stringify(ind + 3))
+        return strs
+    }
 }
 
 // ===== Card Target =====
@@ -365,7 +517,14 @@ export interface CardWithClause {
     effect?: EffectTarget | Backreference
     stat?: {
         statName: string
-        statValue: AmountSpec
+        operator? : AmountModifier
+        statValue?: AmountSpec,
+        compare_to? : CardTarget | Backreference
+    },
+    property?: {
+        propertyName: string
+        compare_to : CardTarget | Backreference
+        operator : AmountModifier.EQ | AmountModifier.NEQ
     }
 }
 
@@ -379,6 +538,45 @@ export class CardTarget extends InferedTarget {
     ){
         super(oldTarget, TargetType.Card)
     }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        const strs: string[] = []
+        strs.push(`${" ".repeat(ind)}Card target:`)
+        if (this.amount) {
+            strs.push(...this.amount.stringify(ind + 2))
+        }
+        if (this.flags.length > 0) {
+            strs.push(`${" ".repeat(ind + 2)}Flags:`, ...this.flags.flatMap(f => f.stringify(ind + 3)))
+        }
+        if (this.fromClause) {
+            strs.push(`${" ".repeat(ind + 2)}From:`, ...(this.fromClause as any).stringify(ind + 3))
+        }
+        if (this.withClauses.length > 0) {
+            strs.push(`${" ".repeat(ind + 2)}With clauses:`)
+            for (const clause of this.withClauses) {
+                if (clause.effect) {
+                    strs.push(`${" ".repeat(ind + 3)}Effect:`, ...(clause.effect as any).stringify(ind + 4))
+                }
+                if (clause.stat) {
+                    strs.push(`${" ".repeat(ind + 3)}Stat: ${clause.stat.statName}`)
+                    if(clause.stat.statValue) {
+                        strs.push(...clause.stat.statValue.stringify(ind + 4))
+                    }
+                    if(clause.stat.compare_to) {
+                        const operatorStr = clause.stat.operator !== undefined ? AmountModifier[clause.stat.operator] : "unspecified"
+                        strs.push(`${" ".repeat(ind + 4)}Compare (${operatorStr}) to:`, ...(clause.stat.compare_to as any).stringify(ind + 5))
+                    }
+                }
+                if (clause.property){
+                    strs.push(`${" ".repeat(ind + 3)}Property: ${clause.property.propertyName}`)
+                    const operatorStr = AmountModifier[clause.property.operator]
+                    strs.push(`${" ".repeat(ind + 4)}Compare (${operatorStr}) to:`, ...(clause.property.compare_to as any).stringify(ind + 5))
+                }
+            }
+        }
+        return strs
+    }
 }
 
 export class ThisCard extends CardTarget {
@@ -386,6 +584,11 @@ export class ThisCard extends CardTarget {
         oldTarget : ExpectedTarget,
     ){
         super(oldTarget)
+    }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        return [`${" ".repeat(ind)}This card`]
     }
 }
 
@@ -400,6 +603,22 @@ export class EffectTarget extends InferedTarget {
     ){
         super(oldTarget, TargetType.Effect)
     }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        const strs: string[] = []
+        strs.push(`${" ".repeat(ind)}Effect target:`)
+        if (this.amount) {
+            strs.push(...this.amount.stringify(ind + 2))
+        }
+        if (this.flags.length > 0) {
+            strs.push(`${" ".repeat(ind + 2)}Flags:`, ...this.flags.flatMap(f => f.stringify(ind + 3)))
+        }
+        if (this.fromClause) {
+            strs.push(`${" ".repeat(ind + 2)}From:`, ...(this.fromClause as any).stringify(ind + 3))
+        }
+        return strs
+    }
 }
 
 export class ThisEffect extends EffectTarget {
@@ -407,6 +626,11 @@ export class ThisEffect extends EffectTarget {
         oldTarget : ExpectedTarget,
     ){
         super(oldTarget)
+    }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        return [`${" ".repeat(ind)}This effect`]
     }
 }
 
@@ -430,6 +654,35 @@ export class PosTarget extends InferedTarget {
     ){
         super(oldTarget, TargetType.Position)
     }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        const strs: string[] = []
+        strs.push(`${" ".repeat(ind)}Position target:`)
+        if (this.amount) {
+            strs.push(...this.amount.stringify(ind + 2))
+        }
+        if (this.flags.length > 0) {
+            strs.push(`${" ".repeat(ind + 2)}Flags:`, ...this.flags.flatMap(f => f.stringify(ind + 3)))
+        }
+        if (this.fromClause) {
+            strs.push(`${" ".repeat(ind + 2)}From:`, ...(this.fromClause as any).stringify(ind + 3))
+        }
+        if (this.directionClause && this.directionClause.length > 0) {
+            strs.push(`${" ".repeat(ind + 2)}Directions:`, ...this.directionClause.flatMap(d => d.stringify(ind + 3)))
+        }
+        if (this.distanceClause) {
+            strs.push(`${" ".repeat(ind + 2)}Distance:`, ...this.distanceClause.distance.stringify(ind + 3))
+            strs.push(`${" ".repeat(ind + 2)}Distance from:`, ...(this.distanceClause.from as any).stringify(ind + 3))
+            if (this.distanceClause.in) {
+                strs.push(`${" ".repeat(ind + 2)}Distance in:`, ...(this.distanceClause.in as any).stringify(ind + 3))
+            }
+        }
+        if (this.withClauses.length > 0) {
+            strs.push(`${" ".repeat(ind + 2)}With clauses:`, ...this.withClauses.flatMap(w => (w as any).stringify(ind + 3)))
+        }
+        return strs
+    }
 }
 
 export class PosOfCard extends PosTarget {
@@ -447,6 +700,16 @@ export class PosOfCard extends PosTarget {
             [card]
         )
     }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        const strs: string[] = []
+        strs.push(`${" ".repeat(ind)}Position of card:`)
+        if (this.withClauses.length > 0) {
+            strs.push(...this.withClauses.flatMap(w => (w as any).stringify(ind + 2)))
+        }
+        return strs
+    }
 }
 
 // Pos dont have this
@@ -460,6 +723,16 @@ export class ZoneTarget extends InferedTarget {
         public zoneName: string = ""
     ){
         super(oldTarget, TargetType.Zone)
+    }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        const strs: string[] = []
+        strs.push(`${" ".repeat(ind)}Zone target: ${this.zoneName}`)
+        if (this.flags.length > 0) {
+            strs.push(`${" ".repeat(ind + 2)}Flags:`, ...this.flags.flatMap(f => f.stringify(ind + 3)))
+        }
+        return strs
     }
 }
 
@@ -475,6 +748,11 @@ export class PlayerTarget extends InferedTarget {
     ){
         super(oldTarget, TargetType.Player)
     }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        return [`${" ".repeat(ind)}Player: ${this.playerName} (index ${this.playerIndex})`]
+    }
 }
 
 export class ThisPlayer extends PlayerTarget {
@@ -482,6 +760,11 @@ export class ThisPlayer extends PlayerTarget {
         oldTarget : ExpectedTarget,
     ){
         super(oldTarget, "player")
+    }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        return [`${" ".repeat(ind)}This player`]
     }
 }
 
@@ -494,6 +777,14 @@ export class NumberTarget extends InferedTarget {
     ){
         super(oldTarget, TargetType.Number)
     }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        const strs: string[] = []
+        strs.push(`${" ".repeat(ind)}Number target:`)
+        strs.push(...(this.amount as any).stringify(ind + 2))
+        return strs
+    }
 }
 
 export class CountOfTarget extends NumberTarget {
@@ -502,6 +793,14 @@ export class CountOfTarget extends NumberTarget {
         public countOf : ExpectedTarget
     ){
         super(oldTarget, new INT_LIT(oldTarget, 0))
+    }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        const strs: string[] = []
+        strs.push(`${" ".repeat(ind)}Count of:`)
+        strs.push(...this.countOf.stringify(ind + 2))
+        return strs
     }
 }
 
@@ -512,6 +811,14 @@ export class NumberPropertyOfTarget extends NumberTarget {
         public propertyOf : AnyInferedTarget | Backreference,
     ){
         super(oldTarget, new INT_LIT(oldTarget, 0))
+    }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        const strs: string[] = []
+        strs.push(`${" ".repeat(ind)}Property: ${this.propertyName}`)
+        strs.push(`${" ".repeat(ind + 2)}Of:`, ...(this.propertyOf as any).stringify(ind + 3))
+        return strs
     }
 }
 
@@ -525,8 +832,23 @@ export class InferedActionSegment extends SentenceSegment {
         segment : ActionSegment,
         public actionID : string,
         public inferedClassificationPath : InferedTarget[],
+        public isInstead = segment.isInstead
     ){
         super(segment.raw)
+        this.owner = segment.owner
+    }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        const strs: string[] = []
+        strs.push(`${" ".repeat(ind)}Action segment: ${this.actionID}`)
+        if(this.isInstead){
+            strs.push(`${" ".repeat(ind + 3)}Instead: true`)
+        }
+        if (this.inferedClassificationPath.length > 0) {
+            strs.push(...this.inferedClassificationPath.flatMap(p => p.stringify(ind + 3)))
+        }
+        return strs
     }
 }
 
@@ -536,6 +858,17 @@ export class InferedTargetSegment extends SentenceSegment {
         public inferedClassificationPaths : InferedTarget[]
     ){
         super(segment.raw)
+        this.owner = segment.owner
+    }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        const strs: string[] = []
+        strs.push(`${" ".repeat(ind)}Target segment:`)
+        if (this.inferedClassificationPaths.length > 0) {
+            strs.push(...this.inferedClassificationPaths.flatMap(p => p ? p.stringify(ind + 3) : "Unknown"))
+        }
+        return strs
     }
 }
 
@@ -546,6 +879,17 @@ export class InferedConditionSegment extends SentenceSegment {
         public inferedClassificationPaths : InferedTarget[],
     ){
         super(segment.raw)
+        this.owner = segment.owner
+    }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        const strs: string[] = []
+        strs.push(`${" ".repeat(ind)}Condition segment: ${this.conditionID}`)
+        if (this.inferedClassificationPaths.length > 0) {
+            strs.push(...this.inferedClassificationPaths.flatMap(p => p.stringify(ind + 3)))
+        }
+        return strs
     }
 }
 

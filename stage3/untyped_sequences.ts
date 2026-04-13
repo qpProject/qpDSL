@@ -1,11 +1,30 @@
 export const data = {
     "creation": {
+        "keyword_lock": {
+            "seq": [
+                "keyword_lock"
+            ],
+            "action_names": [
+                "a_lock_0"
+            ]
+        },
         "keyword_reprogram": {
             "seq": [
                 "keyword_reprogram"
             ],
             "action_names": [
                 "a_reprogram_start_0"
+            ]
+        },
+        "keyword_force-Obj-keyword_to-keyword_lose": {
+            "seq": [
+                "keyword_force",
+                "Obj",
+                "keyword_to",
+                "keyword_lose"
+            ],
+            "action_names": [
+                "a_force_end_game_0"
             ]
         },
         "Obj-op_is-keyword_lose": {
@@ -15,7 +34,7 @@ export const data = {
                 "keyword_lose"
             ],
             "action_names": [
-                "a_force_end_game_0"
+                "a_force_end_game_1"
             ]
         },
         "keyword_negate-keyword_current-keyword_action": {
@@ -115,11 +134,11 @@ export const data = {
                 "a_reset_1"
             ]
         },
-        "keyword_deal-Obj-Keyword-keyword_damage-keyword_to-Obj": {
+        "keyword_deal-Obj-DAMAGE_TYPE-keyword_damage-keyword_to-Obj": {
             "seq": [
                 "keyword_deal",
                 "Obj",
-                "Keyword",
+                "DAMAGE_TYPE",
                 "keyword_damage",
                 "keyword_to",
                 "Obj"
@@ -128,11 +147,11 @@ export const data = {
                 "a_deal_damage_0"
             ]
         },
-        "keyword_deal-Obj-Keyword-keyword_damage-keyword_ahead": {
+        "keyword_deal-Obj-DAMAGE_TYPE-keyword_damage-keyword_ahead": {
             "seq": [
                 "keyword_deal",
                 "Obj",
-                "Keyword",
+                "DAMAGE_TYPE",
                 "keyword_damage",
                 "keyword_ahead"
             ],
@@ -278,11 +297,11 @@ export const data = {
                 "a_shuffle_0"
             ]
         },
-        "keyword_add-Obj-Keyword-keyword_to-Obj": {
+        "keyword_add-Obj-CARD_STAT-keyword_to-Obj": {
             "seq": [
                 "keyword_add",
                 "Obj",
-                "Keyword",
+                "CARD_STAT",
                 "keyword_to",
                 "Obj"
             ],
@@ -290,23 +309,21 @@ export const data = {
                 "a_add_status_effect_0"
             ]
         },
-        "keyword_add-Keyword-keyword_to-Obj": {
+        "keyword_add-EXTENSION-keyword_to-Obj": {
             "seq": [
                 "keyword_add",
-                "Keyword",
+                "EXTENSION",
                 "keyword_to",
                 "Obj"
             ],
             "action_names": [
-                "a_add_status_effect_1",
-                "a_add_effect_0",
-                "a_add_effect_modifier_0"
+                "a_add_status_effect_1"
             ]
         },
-        "keyword_override-Keyword-keyword_of-Obj-keyword_to-Obj": {
+        "keyword_override-CARD_STAT-keyword_of-Obj-keyword_to-Obj": {
             "seq": [
                 "keyword_override",
-                "Keyword",
+                "CARD_STAT",
                 "keyword_of",
                 "Obj",
                 "keyword_to",
@@ -327,31 +344,53 @@ export const data = {
                 "a_add_status_effect_3"
             ]
         },
-        "keyword_add-Keyword-keyword_to-Obj-keyword_with-Keyword": {
+        "keyword_add-EFFECT_ID-keyword_to-Obj": {
             "seq": [
                 "keyword_add",
-                "Keyword",
+                "EFFECT_ID",
+                "keyword_to",
+                "Obj"
+            ],
+            "action_names": [
+                "a_add_effect_0"
+            ]
+        },
+        "keyword_add-EFFECT_ID-keyword_to-Obj-keyword_with-EFFECT_MODIFIER": {
+            "seq": [
+                "keyword_add",
+                "EFFECT_ID",
                 "keyword_to",
                 "Obj",
                 "keyword_with",
-                "Keyword"
+                "EFFECT_MODIFIER"
             ],
             "action_names": [
                 "a_add_effect_1"
             ]
         },
-        "keyword_add-Keyword-keyword_to-Obj-keyword_override-keyword_with-Keyword": {
+        "keyword_add-EFFECT_ID-keyword_to-Obj-keyword_override-keyword_with-EFFECT_MODIFIER": {
             "seq": [
                 "keyword_add",
-                "Keyword",
+                "EFFECT_ID",
                 "keyword_to",
                 "Obj",
                 "keyword_override",
                 "keyword_with",
-                "Keyword"
+                "EFFECT_MODIFIER"
             ],
             "action_names": [
                 "a_add_effect_2"
+            ]
+        },
+        "keyword_add-EFFECT_MODIFIER-keyword_to-Obj": {
+            "seq": [
+                "keyword_add",
+                "EFFECT_MODIFIER",
+                "keyword_to",
+                "Obj"
+            ],
+            "action_names": [
+                "a_add_effect_modifier_0"
             ]
         },
         "keyword_duplicate-Obj-keyword_to-Obj": {
@@ -367,20 +406,20 @@ export const data = {
                 "a_duplicate_card_1"
             ]
         },
-        "keyword_duplicate-Obj-keyword_to-Obj-keyword_with-Keyword": {
+        "keyword_duplicate-Obj-keyword_to-Obj-keyword_with-EFFECT_MODIFIER": {
             "seq": [
                 "keyword_duplicate",
                 "Obj",
                 "keyword_to",
                 "Obj",
                 "keyword_with",
-                "Keyword"
+                "EFFECT_MODIFIER"
             ],
             "action_names": [
                 "a_duplicate_effect_1"
             ]
         },
-        "keyword_duplicate-Obj-keyword_to-Obj-keyword_override-keyword_with-Keyword": {
+        "keyword_duplicate-Obj-keyword_to-Obj-keyword_override-keyword_with-EFFECT_MODIFIER": {
             "seq": [
                 "keyword_duplicate",
                 "Obj",
@@ -388,7 +427,7 @@ export const data = {
                 "Obj",
                 "keyword_override",
                 "keyword_with",
-                "Keyword"
+                "EFFECT_MODIFIER"
             ],
             "action_names": [
                 "a_duplicate_effect_2"
@@ -403,16 +442,267 @@ export const data = {
                 "a_remove_effect_1"
             ]
         },
-        "keyword_remove-Obj-Keyword-keyword_from-Obj": {
+        "keyword_remove-Obj-CARD_STAT-keyword_from-Obj": {
             "seq": [
                 "keyword_remove",
                 "Obj",
-                "Keyword",
+                "CARD_STAT",
                 "keyword_from",
                 "Obj"
             ],
             "action_names": [
                 "a_remove_status_effect_0"
+            ]
+        },
+        "keyword_attack-Obj": {
+            "seq": [
+                "keyword_attack",
+                "Obj"
+            ],
+            "action_names": [
+                "a_attack_0"
+            ]
+        },
+        "keyword_attack-Obj-keyword_time": {
+            "seq": [
+                "keyword_attack",
+                "Obj",
+                "keyword_time"
+            ],
+            "action_names": [
+                "a_attack_1"
+            ]
+        },
+        "keyword_attack-Obj-keyword_times": {
+            "seq": [
+                "keyword_attack",
+                "Obj",
+                "keyword_times"
+            ],
+            "action_names": [
+                "a_attack_2"
+            ]
+        },
+        "keyword_attack-keyword_with-Obj-keyword_damage-Obj": {
+            "seq": [
+                "keyword_attack",
+                "keyword_with",
+                "Obj",
+                "keyword_damage",
+                "Obj"
+            ],
+            "action_names": [
+                "a_attack_3"
+            ]
+        },
+        "keyword_attack-keyword_with-Obj-DAMAGE_TYPE-keyword_damage-Obj": {
+            "seq": [
+                "keyword_attack",
+                "keyword_with",
+                "Obj",
+                "DAMAGE_TYPE",
+                "keyword_damage",
+                "Obj"
+            ],
+            "action_names": [
+                "a_attack_4"
+            ]
+        },
+        "keyword_attack-keyword_with-Obj-keyword_damage-Obj-keyword_time": {
+            "seq": [
+                "keyword_attack",
+                "keyword_with",
+                "Obj",
+                "keyword_damage",
+                "Obj",
+                "keyword_time"
+            ],
+            "action_names": [
+                "a_attack_5"
+            ]
+        },
+        "keyword_attack-keyword_with-Obj-DAMAGE_TYPE-keyword_damage-Obj-keyword_time": {
+            "seq": [
+                "keyword_attack",
+                "keyword_with",
+                "Obj",
+                "DAMAGE_TYPE",
+                "keyword_damage",
+                "Obj",
+                "keyword_time"
+            ],
+            "action_names": [
+                "a_attack_6"
+            ]
+        },
+        "keyword_attack-keyword_with-Obj-keyword_damage-Obj-keyword_times": {
+            "seq": [
+                "keyword_attack",
+                "keyword_with",
+                "Obj",
+                "keyword_damage",
+                "Obj",
+                "keyword_times"
+            ],
+            "action_names": [
+                "a_attack_7"
+            ]
+        },
+        "keyword_attack-keyword_with-Obj-DAMAGE_TYPE-keyword_damage-Obj-keyword_times": {
+            "seq": [
+                "keyword_attack",
+                "keyword_with",
+                "Obj",
+                "DAMAGE_TYPE",
+                "keyword_damage",
+                "Obj",
+                "keyword_times"
+            ],
+            "action_names": [
+                "a_attack_8"
+            ]
+        },
+        "Obj-keyword_cannot-keyword_take-keyword_more-keyword_than-Obj-keyword_damage": {
+            "seq": [
+                "Obj",
+                "keyword_cannot",
+                "keyword_take",
+                "keyword_more",
+                "keyword_than",
+                "Obj",
+                "keyword_damage"
+            ],
+            "action_names": [
+                "a_damage_prevent_0"
+            ]
+        },
+        "Obj-keyword_cannot-keyword_take-keyword_no-keyword_more-keyword_than-Obj-keyword_damage": {
+            "seq": [
+                "Obj",
+                "keyword_cannot",
+                "keyword_take",
+                "keyword_no",
+                "keyword_more",
+                "keyword_than",
+                "Obj",
+                "keyword_damage"
+            ],
+            "action_names": [
+                "a_damage_prevent_1"
+            ]
+        },
+        "Obj-keyword_cannot-keyword_take-keyword_less-keyword_than-Obj-keyword_damage": {
+            "seq": [
+                "Obj",
+                "keyword_cannot",
+                "keyword_take",
+                "keyword_less",
+                "keyword_than",
+                "Obj",
+                "keyword_damage"
+            ],
+            "action_names": [
+                "a_damage_prevent_2"
+            ]
+        },
+        "Obj-keyword_cannot-keyword_take-keyword_no-keyword_less-keyword_than-Obj-keyword_damage": {
+            "seq": [
+                "Obj",
+                "keyword_cannot",
+                "keyword_take",
+                "keyword_no",
+                "keyword_less",
+                "keyword_than",
+                "Obj",
+                "keyword_damage"
+            ],
+            "action_names": [
+                "a_damage_prevent_3"
+            ]
+        },
+        "Obj-keyword_cannot-keyword_take-keyword_more-keyword_than-Obj-DAMAGE_TYPE-keyword_damage": {
+            "seq": [
+                "Obj",
+                "keyword_cannot",
+                "keyword_take",
+                "keyword_more",
+                "keyword_than",
+                "Obj",
+                "DAMAGE_TYPE",
+                "keyword_damage"
+            ],
+            "action_names": [
+                "a_damage_prevent_4"
+            ]
+        },
+        "Obj-keyword_cannot-keyword_take-keyword_no-keyword_more-keyword_than-Obj-DAMAGE_TYPE-keyword_damage": {
+            "seq": [
+                "Obj",
+                "keyword_cannot",
+                "keyword_take",
+                "keyword_no",
+                "keyword_more",
+                "keyword_than",
+                "Obj",
+                "DAMAGE_TYPE",
+                "keyword_damage"
+            ],
+            "action_names": [
+                "a_damage_prevent_5"
+            ]
+        },
+        "Obj-keyword_cannot-keyword_take-keyword_less-keyword_than-Obj-DAMAGE_TYPE-keyword_damage": {
+            "seq": [
+                "Obj",
+                "keyword_cannot",
+                "keyword_take",
+                "keyword_less",
+                "keyword_than",
+                "Obj",
+                "DAMAGE_TYPE",
+                "keyword_damage"
+            ],
+            "action_names": [
+                "a_damage_prevent_6"
+            ]
+        },
+        "Obj-keyword_cannot-keyword_take-keyword_no-keyword_less-keyword_than-Obj-DAMAGE_TYPE-keyword_damage": {
+            "seq": [
+                "Obj",
+                "keyword_cannot",
+                "keyword_take",
+                "keyword_no",
+                "keyword_less",
+                "keyword_than",
+                "Obj",
+                "DAMAGE_TYPE",
+                "keyword_damage"
+            ],
+            "action_names": [
+                "a_damage_prevent_7"
+            ]
+        },
+        "Obj-keyword_take-keyword_no-keyword_damage": {
+            "seq": [
+                "Obj",
+                "keyword_take",
+                "keyword_no",
+                "keyword_damage"
+            ],
+            "action_names": [
+                "a_damage_prevent_8"
+            ]
+        },
+        "Obj-keyword_take-keyword_no-DAMAGE_TYPE-keyword_damage": {
+            "seq": [
+                "Obj",
+                "keyword_take",
+                "keyword_no",
+                "DAMAGE_TYPE",
+                "keyword_damage"
+            ],
+            "action_names": [
+                "a_damage_prevent_9"
             ]
         }
     },
@@ -463,28 +753,45 @@ export const data = {
                 "cond_compare_number_0"
             ]
         },
-        "Obj-keyword_has-Keyword": {
+        "Obj-keyword_has-CARD_STAT": {
             "seq": [
                 "Obj",
                 "keyword_has",
-                "Keyword"
+                "CARD_STAT"
             ],
             "action_names": [
-                "cond_card_has_0",
-                "cond_player_has_0",
-                "cond_effect_has_0",
-                "cond_effect_has_1"
+                "cond_card_has_0"
             ]
         },
-        "Obj-keyword_has-Obj-Keyword": {
+        "Obj-keyword_has-Obj-CARD_STAT": {
             "seq": [
                 "Obj",
                 "keyword_has",
                 "Obj",
-                "Keyword"
+                "CARD_STAT"
             ],
             "action_names": [
-                "cond_card_has_1",
+                "cond_card_has_1"
+            ]
+        },
+        "Obj-keyword_has-PLAYER_STAT": {
+            "seq": [
+                "Obj",
+                "keyword_has",
+                "PLAYER_STAT"
+            ],
+            "action_names": [
+                "cond_player_has_0"
+            ]
+        },
+        "Obj-keyword_has-Obj-PLAYER_STAT": {
+            "seq": [
+                "Obj",
+                "keyword_has",
+                "Obj",
+                "PLAYER_STAT"
+            ],
+            "action_names": [
                 "cond_player_has_1"
             ]
         },
@@ -540,6 +847,26 @@ export const data = {
             "action_names": [
                 "cond_card_on_0",
                 "cond_card_on_1"
+            ]
+        },
+        "Obj-keyword_has-EFFECT_TYPE": {
+            "seq": [
+                "Obj",
+                "keyword_has",
+                "EFFECT_TYPE"
+            ],
+            "action_names": [
+                "cond_effect_has_0"
+            ]
+        },
+        "Obj-keyword_has-EFFECT_SUBTYPE": {
+            "seq": [
+                "Obj",
+                "keyword_has",
+                "EFFECT_SUBTYPE"
+            ],
+            "action_names": [
+                "cond_effect_has_1"
             ]
         },
         "Obj-keyword_action": {
@@ -672,23 +999,23 @@ export const data = {
                 "a_deal_damage_2"
             ]
         },
-        "Obj-keyword_take-Keyword-keyword_damage": {
+        "Obj-keyword_take-DAMAGE_TYPE-keyword_damage": {
             "seq": [
                 "Obj",
                 "keyword_take",
-                "Keyword",
+                "DAMAGE_TYPE",
                 "keyword_damage"
             ],
             "action_names": [
                 "a_deal_damage_3"
             ]
         },
-        "Obj-keyword_take-Obj-Keyword-keyword_damage": {
+        "Obj-keyword_take-Obj-DAMAGE_TYPE-keyword_damage": {
             "seq": [
                 "Obj",
                 "keyword_take",
                 "Obj",
-                "Keyword",
+                "DAMAGE_TYPE",
                 "keyword_damage"
             ],
             "action_names": [
@@ -868,44 +1195,54 @@ export const data = {
                 "a_shuffle_2"
             ]
         },
-        "Obj-keyword_receive-Keyword": {
+        "keyword_extension-keyword_of-Obj-op_is-keyword_change": {
             "seq": [
+                "keyword_extension",
+                "keyword_of",
                 "Obj",
-                "keyword_receive",
-                "Keyword"
+                "op_is",
+                "keyword_change"
             ],
             "action_names": [
-                "a_add_status_effect_4",
-                "a_add_effect_5",
-                "a_add_effect_modifier_1"
+                "a_add_status_effect_4"
             ]
         },
-        "Obj-keyword_receive-Obj-Keyword": {
+        "Obj-keyword_receive-CARD_STAT": {
             "seq": [
                 "Obj",
                 "keyword_receive",
-                "Obj",
-                "Keyword"
+                "CARD_STAT"
             ],
             "action_names": [
                 "a_add_status_effect_5"
             ]
         },
-        "Keyword-keyword_of-Obj-op_is-keyword_override": {
+        "Obj-keyword_receive-Obj-CARD_STAT": {
             "seq": [
-                "Keyword",
+                "Obj",
+                "keyword_receive",
+                "Obj",
+                "CARD_STAT"
+            ],
+            "action_names": [
+                "a_add_status_effect_6"
+            ]
+        },
+        "CARD_STAT-keyword_of-Obj-op_is-keyword_override": {
+            "seq": [
+                "CARD_STAT",
                 "keyword_of",
                 "Obj",
                 "op_is",
                 "keyword_override"
             ],
             "action_names": [
-                "a_add_status_effect_6"
+                "a_add_status_effect_7"
             ]
         },
-        "Keyword-keyword_of-Obj-op_is-keyword_override-keyword_to-Obj": {
+        "CARD_STAT-keyword_of-Obj-op_is-keyword_override-keyword_to-Obj": {
             "seq": [
-                "Keyword",
+                "CARD_STAT",
                 "keyword_of",
                 "Obj",
                 "op_is",
@@ -914,19 +1251,19 @@ export const data = {
                 "Obj"
             ],
             "action_names": [
-                "a_add_status_effect_7"
+                "a_add_status_effect_8"
             ]
         },
-        "Keyword-keyword_of-Obj-op_is-keyword_change": {
+        "CARD_STAT-keyword_of-Obj-op_is-keyword_change": {
             "seq": [
-                "Keyword",
+                "CARD_STAT",
                 "keyword_of",
                 "Obj",
                 "op_is",
                 "keyword_change"
             ],
             "action_names": [
-                "a_add_status_effect_8"
+                "a_add_status_effect_9"
             ]
         },
         "keyword_stat-keyword_of-Obj-op_is-keyword_change": {
@@ -938,7 +1275,7 @@ export const data = {
                 "keyword_change"
             ],
             "action_names": [
-                "a_add_status_effect_9"
+                "a_add_status_effect_10"
             ]
         },
         "Obj-keyword_receive-keyword_heal-keyword_of-Obj": {
@@ -950,7 +1287,7 @@ export const data = {
                 "Obj"
             ],
             "action_names": [
-                "a_add_status_effect_10"
+                "a_add_status_effect_11"
             ]
         },
         "Obj-keyword_receive-keyword_effect": {
@@ -974,15 +1311,35 @@ export const data = {
                 "a_add_effect_4"
             ]
         },
-        "Obj-keyword_receive-keyword_new-Keyword": {
+        "Obj-keyword_receive-EFFECT_ID": {
+            "seq": [
+                "Obj",
+                "keyword_receive",
+                "EFFECT_ID"
+            ],
+            "action_names": [
+                "a_add_effect_5"
+            ]
+        },
+        "Obj-keyword_receive-keyword_new-EFFECT_ID": {
             "seq": [
                 "Obj",
                 "keyword_receive",
                 "keyword_new",
-                "Keyword"
+                "EFFECT_ID"
             ],
             "action_names": [
                 "a_add_effect_6"
+            ]
+        },
+        "Obj-keyword_receive-EFFECT_MODIFIER": {
+            "seq": [
+                "Obj",
+                "keyword_receive",
+                "EFFECT_MODIFIER"
+            ],
+            "action_names": [
+                "a_add_effect_modifier_1"
             ]
         },
         "Obj-op_is-keyword_duplicate": {
@@ -1006,10 +1363,10 @@ export const data = {
                 "a_remove_effect_2"
             ]
         },
-        "Obj-Keyword-op_is-keyword_remove-keyword_from-Obj": {
+        "Obj-CARD_STAT-op_is-keyword_remove-keyword_from-Obj": {
             "seq": [
                 "Obj",
-                "Keyword",
+                "CARD_STAT",
                 "op_is",
                 "keyword_remove",
                 "keyword_from",

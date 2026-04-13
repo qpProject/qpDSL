@@ -53,6 +53,12 @@ export class TokenStorage<T extends string = never> {
         // this.groupped[name] = s
         return this.register(name, reg, "keyword")
     }
+    KEYWORD_CASE_MATTERS<K extends string>(name : K, ...s : string[]){
+        let [reg, strs] = this.preprocessStrToReg(name, s)
+        reg = new RegExp(reg.source, "") //remove ignore case
+        // this.groupped[name] = strs
+        return this.register(name, reg, "keyword")
+    }
     PREPOSITION<K extends string>(name : K, ...s : string[]){
         const [reg, strs] = this.preprocessStrToReg(name, s)
         // this.groupped[name] = strs

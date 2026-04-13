@@ -3,6 +3,10 @@ import type { ASTNode } from "../types";
 import { Context } from "./Context";
 
 export abstract class AstGenParser extends EmbeddedActionsParser {
+    get isBounded() : boolean {
+        return false
+    }
+
     protected SUBRULE_THEN_PUSH<T>(array : T[], rule : ParserMethod<any, T>, options?: ConsumeMethodOpts) : void {
         const R = this.SUBRULE(rule, options)
         this.ACTION(() => array.push(R))

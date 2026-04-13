@@ -1,8 +1,9 @@
 export interface ASTNode {
     readonly raw : string,
+    stringify(indent? : number) : string[]
 }
 
-export const enum TargetType {
+export enum TargetType {
     Number,
     Keyword,
     
@@ -15,30 +16,30 @@ export const enum TargetType {
     Any,
 }
 
-export const enum SentenceType {
+export enum SentenceType {
     Condition,
     Target,
     Action,
     DeclareRuntimeVar,
 }
 
-export const enum ConditionType {
+export enum ConditionType {
     If,
     Else, 
     Unless,
 }
 
-export const enum BinOpType {
+export enum BinOpType {
     And,
     Or,
 }
 
-export const enum VariableType {
+export enum VariableType {
     Internal,
     Runtime
 }
 
-export const enum AmountModifier {
+export enum AmountModifier {
     MORE,
     LESS,
     LEQ,
@@ -47,7 +48,7 @@ export const enum AmountModifier {
     NEQ
 }
 
-export const enum Direction {
+export enum Direction {
     up,
     down,
     left,

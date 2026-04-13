@@ -68,19 +68,25 @@ const effect_prefix = createToken({
     push_mode : "meta_data"
 })
 
+const ID_UNKNOWN = createToken({
+    name : "ID_UNKNOWN",
+    pattern : /[^\s+]+/,
+    line_breaks : false,
+})
+
 const tokens_meta_data = new TokenStorage()
 .CUSTOM("EFFECT", "PREFIX", effect_prefix)
 .CUSTOM("SYMBOL", "COLON", createToken({
     name : "SYMBOL_COLON",
     pattern : /:/,
-    pop_mode : true,
+    // pop_mode : true,
     push_mode : "sentences"
 }))
 .SYMBOLS("ARROW", /[=\-]+>/)
 .SYMBOLS("DOT", /\./)
 .SYMBOLS("EQ", /=/)
 .SKIPPED("WHITESPACE", /\s+/)
-.ID("_NO_DOT", /[a-zA-Z0-9_]+/)
+.ID("_NO_DOT", /[a-zA-Z0-9_*]+|[+\-][0-9]+|-Infinity/)
 
 const tokens_sentences = new TokenStorage()
 .SKIPPED("WHITESPACE", /\s+/)
@@ -90,18 +96,30 @@ const tokens_sentences = new TokenStorage()
 //if there is SOMETHING after the dot
 // else the dot is lex as a sentence_separator
 .ID("_WITH_DOT", ID_WITH_DOT_REG)
-.ID("_BRACKETED", /\[.*?\]|\(.*?\)|\{.*?\}/)
+
+const TOKENS_SOLID = {
+    ...tokens_meta_data.createStorageObj(),
+    ...tokens_sentences.createStorageObj(),
+}
+
+const tokens_unknown = new TokenStorage()
+.CUSTOM("", TOKENS_SOLID.WHITESPACE.name, TOKENS_SOLID.WHITESPACE)
+.CUSTOM("", TOKENS_SOLID.EFFECT_PREFIX.name, TOKENS_SOLID.EFFECT_PREFIX)
+.CUSTOM("", TOKENS_SOLID.SYMBOL_COLON.name, TOKENS_SOLID.SYMBOL_COLON)
+.CUSTOM("ID", "UNKNOWN", ID_UNKNOWN)
 
 export const TOKENS = {
     ...tokens_meta_data.createStorageObj(),
     ...tokens_sentences.createStorageObj(),
+    ID_UNKNOWN : ID_UNKNOWN,
 }
 
 export const ALL_TOKENS = Object.values(TOKENS)
 
 export const lexer = new Lexer({
-    defaultMode : "meta_data",
+    defaultMode : "unknown",
     modes : {
+        unknown : tokens_unknown.all,
         meta_data : tokens_meta_data.all,
         sentences : tokens_sentences.all,
     },

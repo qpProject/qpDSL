@@ -2,6 +2,7 @@
 import { data as data_untyped } from "./untyped_sequences"
 import { data as data_typed } from "./typed_sequences"
 import { KeywordCategory } from "./keyword_categories"
+import { CONFIG } from "../core"
 
 export class Match {
     constructor(
@@ -45,10 +46,11 @@ function match(
     expected_sequence : ReadonlyArray<string>, 
     action_name : ReadonlyArray<keyof typeof data_typed>
 ) : Match[] | PartialMatch {
+    if(CONFIG.VERBOSE) console.log(`Attempting to match input sequence "${input_sequence.join(" ")}" with expected sequence "${expected_sequence.join(" ")}" for action(s) ${action_name.join(", ")}`);
     const anchors = expected_sequence.filter(t => t !== "Obj")
 
     if(!anchors.length){
-        console.warn(`Action ${action_name} with pattern ${expected_sequence.join(", ")} has no anchors, skipping.`)
+        if(CONFIG.VERBOSE) console.warn(`Action ${action_name} with pattern ${expected_sequence.join(", ")} has no anchors, skipping.`);
         return [];
     };
 
@@ -83,7 +85,6 @@ function match(
 
     //return matches
     return res.map(path => {
-        // console.log(path)
         const P = [...path]
         let currentAnchorIndex = path[0]
         const res = []
@@ -140,6 +141,9 @@ export function lookup(sequence : string[], sequence_type : keyof typeof data_un
             }
             continue;
         }
+
+        console.log(`Matches for pattern ${s.join(", ")}:`)
+        console.log(`Found ${matches.length} matches for action(s) ${obj.action_names.join(", ")} wih anchor lengths : ${matches.map(m => m.anchor_positions.length).join(", ")}`)
 
         for(const m of matches){
             if(seen.has(m.toString())) continue;

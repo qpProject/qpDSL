@@ -11,6 +11,12 @@ export class ExpectedTarget extends Target {
     ){
         super(raw);
     }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        const typeStr = TargetType[this.expectedType]
+        return [`${" ".repeat(ind)}Expected target: ${typeStr}`]
+    }
 }
 
 export class ActionSegment extends SentenceSegment {
@@ -23,6 +29,26 @@ export class ActionSegment extends SentenceSegment {
         public isInstead : boolean
     ){
         super(segment.raw)
+        this.owner = segment.owner
+    }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        const strs: string[] = []
+        // strs.push(`${" ".repeat(ind)}Action segment:`)
+        if (this.isInstead) {
+            strs.push(`${" ".repeat(ind + 2)}Instead: true`)
+        }
+        if (this.possibleClassificationPaths.length > 0) {
+            strs.push(`${" ".repeat(ind + 2)}Possible paths:`)
+            for (const path of this.possibleClassificationPaths) {
+                strs.push(`${" ".repeat(ind + 4)}Action: ${path.action_name}`)
+                if (path.targets.length > 0) {
+                    strs.push(`${" ".repeat(ind + 5)}Targets:`, ...path.targets.flatMap(t => t.stringify(ind + 6)))
+                }
+            }
+        }
+        return strs
     }
 }
 
@@ -32,6 +58,17 @@ export class TargetSegment extends SentenceSegment {
         segment : SentenceSegment,
     ){
         super(segment.raw)
+        this.owner = segment.owner
+    }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        const strs: string[] = []
+        // strs.push(`${" ".repeat(ind)}Target segment:`)
+        if (this.targets.length > 0) {
+            strs.push(`${" ".repeat(ind + 2)}Targets:`, ...this.targets.flatMap(t => t.stringify(ind + 3)))
+        }
+        return strs
     }
 }
 
@@ -44,6 +81,23 @@ export class ConditionSegment extends SentenceSegment {
         }[],
     ){
         super(segment.raw)
+        this.owner = segment.owner
+    }
+
+    override stringify(indent?: number): string[] {
+        const ind = indent ?? 0
+        const strs: string[] = []
+        // strs.push(`${" ".repeat(ind)}Condition segment:`)
+        if (this.possibleClassificationPaths.length > 0) {
+            strs.push(`${" ".repeat(ind + 2)}Possible paths:`)
+            for (const path of this.possibleClassificationPaths) {
+                strs.push(`${" ".repeat(ind + 4)}Condition: ${path.action_name}`)
+                if (path.targets.length > 0) {
+                    strs.push(`${" ".repeat(ind + 5)}Targets:`, ...path.targets.flatMap(t => t.stringify(ind + 6)))
+                }
+            }
+        }
+        return strs
     }
 }
 
